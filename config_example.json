@@ -1,0 +1,54 @@
+{
+  "EnableProxy": false,
+  "Proxy": "127.0.0.1:1080",
+  "CheckSec": 30,
+  "BotHost": "",
+  "BotToken": "",
+  "DownloadQuality": "best",
+  "DownloadDir": "",
+  "Module": [
+    {
+      "Name": "Youtube",
+      "Enable": true,
+      "EnableTemp": false,
+      "Users": [
+        {
+          "TargetId": "UCQ0UDLQCjY0rmuxCDE38FGg",
+          "Name": "natsuiromatsuri"
+        }
+      ]
+    },
+    {
+      "Name": "Twitcasting",
+      "Enable": true,
+      "Users": [
+        {
+          "TargetId": "natsuiromatsuri",
+          "Name": "natsuiromatsuri"
+        }
+      ]
+    },
+    {
+      "Name": "Mirrativ",
+      "Enable": true,
+      "Users": [
+        {
+          "TargetId": "3264432",
+          "Name": "natsuiromatsuri"
+        }
+      ]
+    },
+    {
+      "Name": "Bilibili",
+      "Enable": true,
+      "Users": [
+        {
+          "TargetId": "336731767",
+          "Name": "natsuiromatsuri",
+          "Live": false,
+          "Article": false
+        }
+      ]
+    }
+  ]
+}
