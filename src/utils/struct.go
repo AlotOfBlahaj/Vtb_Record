@@ -5,6 +5,6 @@ type VideoInfo struct {
 	Date          string
 	Target        string
 	Provider      string
-	Filename      string
+	FilePath      string
 	StreamingLink string
 }

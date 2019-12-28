@@ -3,6 +3,7 @@ package plugins
 import (
 	. "Vtb_Record/src/utils"
 	"github.com/bitly/go-simplejson"
+	"strconv"
 )
 
 type Twitacasting struct {
@@ -16,13 +17,12 @@ type twitcastingVideoInfo struct {
 	Vid           string
 }
 
-func (t Twitacasting) getVideoInfo() twitcastingVideoInfo {
+func (t *Twitacasting) getVideoInfo() {
 	rawInfoJson := HttpGet("https://twitcasting.tv/streamserver.php?target=" + t.targetId + "&mode=client")
 	infoJson, _ := simplejson.NewJson(rawInfoJson)
-	t.StreamingLink = "https://twitcasting.tv/" + t.targetId + "/metastream.m3u8"
+	t.StreamingLink = "https://twitcasting.tv/" + t.targetId
 	t.IsLive = infoJson.Get("movie").Get("live").MustBool()
-	t.Vid = infoJson.Get("movie").Get("id").MustString()
-	return t.twitcastingVideoInfo
+	t.Vid = strconv.Itoa(infoJson.Get("movie").Get("id").MustInt())
 }
 func (t Twitacasting) createVideo() VideoInfo {
 	videoTitle := t.targetId + "#" + t.Vid
@@ -31,16 +31,18 @@ func (t Twitacasting) createVideo() VideoInfo {
 		Date:          GetTimeNow(),
 		Target:        t.StreamingLink,
 		Provider:      "Twitcasting",
-		Filename:      GenerateFilepath(t.UserName, videoTitle),
+		FilePath:      GenerateFilepath(t.UserName, videoTitle),
 		StreamingLink: t.StreamingLink,
 	}
 }
-func TwitcastingCheckLive(userConfig UsersConfig) {
+func TwitcastingCheckLive(usersConfig UsersConfig) {
 	t := new(Twitacasting)
-	t.targetId = userConfig.TargetId
-	t.UserName = userConfig.Name
-	twitcastingVideoInfo := t.getVideoInfo()
-	if twitcastingVideoInfo.IsLive {
+	t.targetId = usersConfig.TargetId
+	t.UserName = usersConfig.Name
+	t.getVideoInfo()
+	if t.IsLive {
 		ProcessVideo(t.createVideo())
+	} else {
+		NoLiving("Twitcasting", usersConfig.Name)
 	}
 }

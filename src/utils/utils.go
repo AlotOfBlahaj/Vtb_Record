@@ -40,10 +40,17 @@ func createSOCKS5Proxy() *http.Client {
 	}
 	return client
 }
+func IsFileExist(aFilepath string) bool {
+	if _, err := os.Stat(aFilepath); err == nil {
+		return true
+	} else {
+		return false
+	}
+}
 func GenerateFilepath(UserName string, VideoTitle string) string {
 	pathSlice := []string{Config.DownloadDir, UserName, VideoTitle}
 	aFilepath := strings.Join(pathSlice, "/")
-	if _, err := os.Stat(aFilepath); err == nil {
+	if IsFileExist(aFilepath) {
 		return changeName(aFilepath)
 	} else {
 		return aFilepath
@@ -57,5 +64,5 @@ func changeName(aFilepath string) string {
 	return dir + filename + ext
 }
 func GetTimeNow() string {
-	return time.Now().Format("2019-12-20 22:02:11")
+	return time.Now().Format("2006-01-02 15:04:05")
 }

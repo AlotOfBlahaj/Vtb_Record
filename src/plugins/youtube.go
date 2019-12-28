@@ -40,7 +40,7 @@ func (y Youtube) createVideo() VideoInfo {
 		Date:          GetTimeNow(),
 		Target:        y.Target,
 		Provider:      "Youtube",
-		Filename:      GenerateFilepath(y.Name, y.Title),
+		FilePath:      GenerateFilepath(y.Name, y.Title),
 		StreamingLink: "",
 	}
 }
@@ -51,6 +51,7 @@ func YoutubeCheckLive(usersConfig UsersConfig) {
 	yfConfig := y.getVideoInfo()
 	if yfConfig.IsLive == true {
 		ProcessVideo(y.createVideo())
+	} else {
+		NoLiving("Youtube", usersConfig.Name)
 	}
-	NoLiving("Youtube", usersConfig.Name)
 }

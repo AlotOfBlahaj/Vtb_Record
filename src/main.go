@@ -10,15 +10,13 @@ import (
 type ScheduleTask func(UsersConfig)
 
 func RunScheduleTask(userConfig UsersConfig, task ScheduleTask) {
-	var ch chan int
 	ticker := time.NewTicker(time.Second * time.Duration(Config.CheckSec))
 	go func() {
-		for range ticker.C {
+		for {
 			task(userConfig)
+			<-ticker.C
 		}
-		ch <- 1
 	}()
-	<-ch
 }
 func logUp(moduleName, TargetId string) {
 	fmt.Printf("%s: %s up\n", moduleName, TargetId)
