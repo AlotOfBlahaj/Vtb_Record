@@ -3,6 +3,7 @@ package downloader
 import (
 	"Vtb_Record/src/utils"
 	"errors"
+	"log"
 )
 
 // TODO proxy support
@@ -19,7 +20,17 @@ func getStreamingLink(video utils.VideoInfo) utils.VideoInfo {
 	video.StreamingLink = result
 	return video
 }
+func needDownload(video utils.VideoInfo) error {
+	if !video.UsersConfig.NeedDownload {
+		return errors.New(video.UsersConfig.Name + "needn't download")
+	}
+	return nil
+}
 func DownloadVideo(video utils.VideoInfo) error {
+	log.Printf("%s|%s start to download", video.Provider, video.UsersConfig.Name)
+	if err := needDownload(video); err != nil {
+		return err
+	}
 	switch video.Provider {
 	case "Youtube":
 		video = getStreamingLink(video)

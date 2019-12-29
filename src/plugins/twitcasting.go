@@ -8,7 +8,6 @@ import (
 
 type Twitacasting struct {
 	targetId string
-	UserName string
 	twitcastingVideoInfo
 }
 type twitcastingVideoInfo struct {
@@ -24,25 +23,26 @@ func (t *Twitacasting) getVideoInfo() {
 	t.IsLive = infoJson.Get("movie").Get("live").MustBool()
 	t.Vid = strconv.Itoa(infoJson.Get("movie").Get("id").MustInt())
 }
-func (t Twitacasting) createVideo() VideoInfo {
+func (t Twitacasting) createVideo(usersConfig UsersConfig) VideoInfo {
 	videoTitle := t.targetId + "#" + t.Vid
-	return VideoInfo{
+	v := VideoInfo{
 		Title:         videoTitle,
 		Date:          GetTimeNow(),
 		Target:        t.StreamingLink,
 		Provider:      "Twitcasting",
-		FilePath:      GenerateFilepath(t.UserName, videoTitle),
+		FilePath:      GenerateFilepath(usersConfig.Name, videoTitle),
 		StreamingLink: t.StreamingLink,
+		UsersConfig:   usersConfig,
 	}
+	v.CreateLiveMsg()
+	return v
 }
-func TwitcastingCheckLive(usersConfig UsersConfig) {
-	t := new(Twitacasting)
-	t.targetId = usersConfig.TargetId
-	t.UserName = usersConfig.Name
+func (t Twitacasting) CheckLive(usersConfig UsersConfig) bool {
 	t.getVideoInfo()
 	if t.IsLive {
-		ProcessVideo(t.createVideo())
+		ProcessVideo(t.createVideo(usersConfig))
 	} else {
 		NoLiving("Twitcasting", usersConfig.Name)
 	}
+	return t.IsLive
 }

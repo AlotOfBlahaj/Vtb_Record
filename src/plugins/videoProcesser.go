@@ -1,26 +1,37 @@
 package plugins
 
 import (
+	"Vtb_Record/src/cqBot"
 	"Vtb_Record/src/downloader"
 	"Vtb_Record/src/utils"
+	"log"
+	"time"
 )
 
 func ProcessVideo(video utils.VideoInfo) {
-	var ch chan []int
-	go func() {
-		downloader.DownloadVideo(video)
-		status := <-ch
-		status[0] = 1
-		ch <- status
-	}()
-	for true {
-	Blocking:
-		status := <-ch
-		for i := range status {
-			if i == 0 {
-				goto Blocking
+	log.Printf("%s|%s is living", video.Provider, video.UsersConfig.Name)
+	var ch chan int
+	switch video.UsersConfig.NeedDownload {
+	case true:
+		go func() {
+			_ = downloader.DownloadVideo(video)
+			ch <- 1
+		}()
+	case false:
+		go func() {
+			ticker := time.NewTicker(time.Minute * 1)
+			for {
+				if CreateVideoMonitor(video.Provider).CheckLive(video.UsersConfig) {
+					break
+				}
+				log.Printf("%s|%s still living", video.Provider, video.UsersConfig.Name)
+				<-ticker.C
 			}
-		}
-		break
+			ch <- 1
+		}()
 	}
+	go func() {
+		_ = cqBot.CQBot(video)
+	}()
+	<-ch
 }

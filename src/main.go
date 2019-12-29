@@ -3,11 +3,11 @@ package main
 import (
 	. "Vtb_Record/src/plugins"
 	. "Vtb_Record/src/utils"
-	"fmt"
+	"log"
 	"time"
 )
 
-type ScheduleTask func(UsersConfig)
+type ScheduleTask func(UsersConfig) bool
 
 func RunScheduleTask(userConfig UsersConfig, task ScheduleTask) {
 	ticker := time.NewTicker(time.Second * time.Duration(Config.CheckSec))
@@ -18,22 +18,13 @@ func RunScheduleTask(userConfig UsersConfig, task ScheduleTask) {
 		}
 	}()
 }
-func logUp(moduleName, TargetId string) {
-	fmt.Printf("%s: %s up\n", moduleName, TargetId)
-}
 func arrangeTask() {
 	var ch chan int
 	for _, module := range Config.Module {
 		if module.Enable {
-			for _, Users := range module.Users {
-				switch module.Name {
-				case "Youtube":
-					logUp(module.Name, Users.TargetId)
-					go RunScheduleTask(Users, YoutubeCheckLive)
-				case "Twitcasting":
-					logUp(module.Name, Users.TargetId)
-					go RunScheduleTask(Users, TwitcastingCheckLive)
-				}
+			for _, usersConfig := range module.Users {
+				log.Printf("%s|%s is up", module.Name, usersConfig.Name)
+				go RunScheduleTask(usersConfig, CreateVideoMonitor(module.Name).CheckLive)
 			}
 		}
 	}

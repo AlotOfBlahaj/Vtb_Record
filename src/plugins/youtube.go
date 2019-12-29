@@ -13,11 +13,10 @@ type yfConfig struct {
 }
 type Youtube struct {
 	yfConfig
-	Url  string
-	Name string
+	Url string
 }
 
-func (y Youtube) getVideoInfo() yfConfig {
+func (y *Youtube) getVideoInfo() yfConfig {
 	htmlBody := HttpGet(y.Url)
 	re, err := regexp.Compile(`ytplayer.config\s*=\s*([^\n]+?});`)
 	CheckError(err, "cannot find yfconfig")
@@ -34,24 +33,26 @@ func (y Youtube) getVideoInfo() yfConfig {
 	y.IsLive = IsLive
 	return y.yfConfig
 }
-func (y Youtube) createVideo() VideoInfo {
-	return VideoInfo{
+func (y Youtube) createVideo(usersConfig UsersConfig) VideoInfo {
+	v := VideoInfo{
 		Title:         y.Title,
 		Date:          GetTimeNow(),
 		Target:        y.Target,
 		Provider:      "Youtube",
-		FilePath:      GenerateFilepath(y.Name, y.Title),
+		FilePath:      GenerateFilepath(usersConfig.Name, y.Title),
 		StreamingLink: "",
+		UsersConfig:   usersConfig,
 	}
+	v.CreateLiveMsg()
+	return v
 }
-func YoutubeCheckLive(usersConfig UsersConfig) {
-	y := new(Youtube)
+func (y Youtube) CheckLive(usersConfig UsersConfig) bool {
 	y.Url = "https://www.youtube.com/channel/" + usersConfig.TargetId + "/live"
-	y.Name = usersConfig.Name
 	yfConfig := y.getVideoInfo()
-	if yfConfig.IsLive == true {
-		ProcessVideo(y.createVideo())
+	if yfConfig.IsLive {
+		ProcessVideo(y.createVideo(usersConfig))
 	} else {
 		NoLiving("Youtube", usersConfig.Name)
 	}
+	return y.yfConfig.IsLive
 }
