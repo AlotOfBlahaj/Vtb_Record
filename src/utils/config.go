@@ -33,6 +33,7 @@ type MainConfig struct {
 	DownloadQuality string
 	DownloadDir     string
 	Module          []ModuleConfig
+	RedisHost       string
 }
 
 func init() {

@@ -7,39 +7,44 @@ import (
 )
 
 // TODO proxy support
-func downloadByFFMPEG(video utils.VideoInfo) {
-	ExecShell("ffmpeg", "-i", video.Target, "-f",
-		"hls", "-hls_time", "3600", "-hls_list_size", "0", video.FilePath)
+func addStreamlinkProxy(co []string) []string {
+	co = append(co, "--http-proxy", "http://"+utils.Config.Proxy, "--https-proxy", "https://"+utils.Config.Proxy)
+	return co
 }
-func downloadByStreamlink(video utils.VideoInfo) {
-	ExecShell("streamlink", "--hls-live-restart", "--force", "--hls-timeout", "120", "-o",
-		video.FilePath, video.StreamingLink, utils.Config.DownloadQuality)
+func downloadByStreamlink(video *utils.VideoInfo) {
+	arg := []string{"--hls-live-restart", "--force", "--hls-timeout", "120", "-o",
+		video.FilePath}
+	if utils.Config.EnableProxy {
+		arg = addStreamlinkProxy(arg)
+	}
+	arg = append(arg, video.Target, utils.Config.DownloadQuality)
+	log.Println(arg)
+	utils.ExecShell("streamlink", arg...)
 }
-func getStreamingLink(video utils.VideoInfo) utils.VideoInfo {
-	result := ExecShell("streamlink", "--stream-url", video.Target, utils.Config.DownloadQuality)
-	video.StreamingLink = result
-	return video
-}
-func needDownload(video utils.VideoInfo) error {
+func needDownload(video *utils.VideoInfo) error {
 	if !video.UsersConfig.NeedDownload {
 		return errors.New(video.UsersConfig.Name + "needn't download")
 	}
 	return nil
 }
-func DownloadVideo(video utils.VideoInfo) error {
+func DownloadVideo(video *utils.VideoInfo) string {
 	log.Printf("%s|%s start to download", video.Provider, video.UsersConfig.Name)
+	video.Title = utils.RemoveIllegalChar(video.Title)
+	video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.Title)
 	if err := needDownload(video); err != nil {
-		return err
+		return ""
 	}
 	switch video.Provider {
 	case "Youtube":
-		video = getStreamingLink(video)
-		downloadByFFMPEG(video)
+		//video = getStreamingLink(video)
+		//downloadByFFMPEG(video)
+		downloadByStreamlink(video)
 	case "Twitcasting":
 		downloadByStreamlink(video)
 	}
 	if !utils.IsFileExist(video.FilePath) {
-		return errors.New("downloader: the video file don't exist")
+		log.Fatal("downloader: the video file don't exist")
+		return ""
 	}
-	return nil
+	return video.FilePath
 }

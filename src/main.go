@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-type ScheduleTask func(UsersConfig) bool
+type ScheduleTask func(monitor VideoMonitor, userConfig UsersConfig)
 
-func RunScheduleTask(userConfig UsersConfig, task ScheduleTask) {
+func RunScheduleTask(userConfig UsersConfig, monitor VideoMonitor, task ScheduleTask) {
 	ticker := time.NewTicker(time.Second * time.Duration(Config.CheckSec))
 	go func() {
 		for {
-			task(userConfig)
+			task(monitor, userConfig)
 			<-ticker.C
 		}
 	}()
@@ -24,7 +24,7 @@ func arrangeTask() {
 		if module.Enable {
 			for _, usersConfig := range module.Users {
 				log.Printf("%s|%s is up", module.Name, usersConfig.Name)
-				go RunScheduleTask(usersConfig, CreateVideoMonitor(module.Name).CheckLive)
+				go RunScheduleTask(usersConfig, CreateVideoMonitor(module.Name), StartMonitor)
 			}
 		}
 	}

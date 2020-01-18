@@ -19,30 +19,32 @@ type CQMsg struct {
 }
 
 // Todo: cqBot support
-func (cc CQConfig) sendGroupMsg(msg CQMsg) {
+func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
 	client := &http.Client{}
 	JsonMsg, _ := json.Marshal(msg)
 	req, _ := http.NewRequest("POST", "http://"+cc.CQHost+"/send_group_msg", bytes.NewBuffer(JsonMsg))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+cc.CQToken)
 	resp, err := client.Do(req)
-	utils.CheckError(err, "CQBot")
+	if err != nil {
+		log.Panicf("CQbot error")
+	}
 	log.Print(resp.StatusCode)
 }
 func (c *CQMsg) CreateCQMsg(groupId int) {
 	c.GroupId = groupId
 }
-func needCQBot(video utils.VideoInfo) error {
+func needCQBot(video *utils.VideoInfo) error {
 	if !video.UsersConfig.NeedCQBot {
 		return errors.New(video.UsersConfig.Name + "needn't download")
 	}
 	return nil
 }
-func CQBot(video utils.VideoInfo) error {
+func CQBot(video *utils.VideoInfo) error {
 	if err := needCQBot(video); err != nil {
 		return err
 	}
-	c := CQMsg{Message: video.CQBotMsg}
+	c := &CQMsg{Message: video.CQBotMsg}
 	cc := &CQConfig{
 		CQHost:  video.UsersConfig.CQHost,
 		CQToken: video.UsersConfig.CQToken,

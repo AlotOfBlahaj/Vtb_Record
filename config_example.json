@@ -1,6 +1,7 @@
 {
   "EnableProxy": false,
-  "Proxy": "127.0.0.1:1080",
+  "Proxy": "127.0.0.1:10800",
+  "RedisHost": "127.0.0.1:6379",
   "CheckSec": 30,
   "BotHost": "",
   "BotToken": "",

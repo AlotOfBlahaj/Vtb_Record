@@ -1,4 +1,4 @@
-package downloader
+package utils
 
 import (
 	"bytes"

@@ -3,6 +3,7 @@ package plugins
 import (
 	. "Vtb_Record/src/utils"
 	"github.com/bitly/go-simplejson"
+	"log"
 	"regexp"
 )
 
@@ -19,7 +20,9 @@ type Youtube struct {
 func (y *Youtube) getVideoInfo() yfConfig {
 	htmlBody := HttpGet(y.Url)
 	re, err := regexp.Compile(`ytplayer.config\s*=\s*([^\n]+?});`)
-	CheckError(err, "cannot find yfconfig")
+	if err != nil {
+		log.Panicf("cannot find yfconfig")
+	}
 	jsonYtConfig := re.FindSubmatch(htmlBody)[1]
 	ytConfigJson, _ := simplejson.NewJson(jsonYtConfig)
 	playerResponse, _ := simplejson.NewJson([]byte(ytConfigJson.Get("args").Get("player_response").MustString()))
@@ -33,26 +36,29 @@ func (y *Youtube) getVideoInfo() yfConfig {
 	y.IsLive = IsLive
 	return y.yfConfig
 }
-func (y Youtube) createVideo(usersConfig UsersConfig) VideoInfo {
-	v := VideoInfo{
+func (y *Youtube) CreateVideo(usersConfig UsersConfig) *VideoInfo {
+	v := &VideoInfo{
 		Title:         y.Title,
 		Date:          GetTimeNow(),
 		Target:        y.Target,
 		Provider:      "Youtube",
-		FilePath:      GenerateFilepath(usersConfig.Name, y.Title),
 		StreamingLink: "",
 		UsersConfig:   usersConfig,
 	}
 	v.CreateLiveMsg()
 	return v
 }
-func (y Youtube) CheckLive(usersConfig UsersConfig) bool {
+func (y *Youtube) CheckLive(usersConfig UsersConfig) bool {
 	y.Url = "https://www.youtube.com/channel/" + usersConfig.TargetId + "/live"
 	yfConfig := y.getVideoInfo()
-	if yfConfig.IsLive {
-		ProcessVideo(y.createVideo(usersConfig))
-	} else {
+	if !yfConfig.IsLive {
 		NoLiving("Youtube", usersConfig.Name)
 	}
 	return y.yfConfig.IsLive
 }
+
+//func (y *Youtube) StartMonitor(usersConfig UsersConfig) {
+//	if y.CheckLive(usersConfig) {
+//		ProcessVideo(y.createVideo(usersConfig))
+//	}
+//}

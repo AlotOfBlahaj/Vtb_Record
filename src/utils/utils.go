@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"github.com/tmdvs/Go-Emoji-Utils"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -18,12 +19,10 @@ func HttpGet(url string) []byte {
 	} else {
 		client = http.DefaultClient
 	}
-	req, err := http.NewRequest("GET", url, nil)
-	CheckError(err, "request html error")
+	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101 Firefox/60.0")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.8")
-	res, err := client.Do(req)
-	CheckError(err, "request html error")
+	res, _ := client.Do(req)
 	htmlBody, _ := ioutil.ReadAll(res.Body)
 	return htmlBody
 }
@@ -48,8 +47,15 @@ func IsFileExist(aFilepath string) bool {
 	}
 }
 func GenerateFilepath(UserName string, VideoTitle string) string {
-	pathSlice := []string{Config.DownloadDir, UserName, VideoTitle}
+	pathSlice := []string{Config.DownloadDir, UserName, RemoveIllegalChar(VideoTitle) + ".ts"}
 	aFilepath := strings.Join(pathSlice, "/")
+	dirPath := pathSlice[0] + "/" + pathSlice[1]
+	if !IsFileExist(dirPath) {
+		err := os.Mkdir(dirPath, 0775)
+		if err != nil {
+			panic("mkdir error")
+		}
+	}
 	if IsFileExist(aFilepath) {
 		return changeName(aFilepath)
 	} else {
@@ -65,4 +71,12 @@ func changeName(aFilepath string) string {
 }
 func GetTimeNow() string {
 	return time.Now().Format("2006-01-02 15:04:05")
+}
+func RemoveIllegalChar(Title string) string {
+	illegalChars := []string{"|", "/", "\\", ":", "?"}
+	Title = emoji.RemoveAll(Title)
+	for _, char := range illegalChars {
+		Title = strings.ReplaceAll(Title, char, "#")
+	}
+	return Title
 }

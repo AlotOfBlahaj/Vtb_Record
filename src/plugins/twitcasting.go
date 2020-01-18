@@ -23,25 +23,22 @@ func (t *Twitacasting) getVideoInfo() {
 	t.IsLive = infoJson.Get("movie").Get("live").MustBool()
 	t.Vid = strconv.Itoa(infoJson.Get("movie").Get("id").MustInt())
 }
-func (t Twitacasting) createVideo(usersConfig UsersConfig) VideoInfo {
+func (t *Twitacasting) CreateVideo(usersConfig UsersConfig) *VideoInfo {
 	videoTitle := t.targetId + "#" + t.Vid
-	v := VideoInfo{
+	v := &VideoInfo{
 		Title:         videoTitle,
 		Date:          GetTimeNow(),
 		Target:        t.StreamingLink,
 		Provider:      "Twitcasting",
-		FilePath:      GenerateFilepath(usersConfig.Name, videoTitle),
 		StreamingLink: t.StreamingLink,
 		UsersConfig:   usersConfig,
 	}
 	v.CreateLiveMsg()
 	return v
 }
-func (t Twitacasting) CheckLive(usersConfig UsersConfig) bool {
+func (t *Twitacasting) CheckLive(usersConfig UsersConfig) bool {
 	t.getVideoInfo()
-	if t.IsLive {
-		ProcessVideo(t.createVideo(usersConfig))
-	} else {
+	if !t.IsLive {
 		NoLiving("Twitcasting", usersConfig.Name)
 	}
 	return t.IsLive
