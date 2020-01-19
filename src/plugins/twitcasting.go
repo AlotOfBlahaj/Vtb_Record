@@ -7,7 +7,7 @@ import (
 )
 
 type Twitacasting struct {
-	targetId string
+	TargetId string
 	twitcastingVideoInfo
 }
 type twitcastingVideoInfo struct {
@@ -17,14 +17,14 @@ type twitcastingVideoInfo struct {
 }
 
 func (t *Twitacasting) getVideoInfo() {
-	rawInfoJson := HttpGet("https://twitcasting.tv/streamserver.php?target=" + t.targetId + "&mode=client")
+	rawInfoJson := HttpGet("https://twitcasting.tv/streamserver.php?target=" + t.TargetId + "&mode=client")
 	infoJson, _ := simplejson.NewJson(rawInfoJson)
-	t.StreamingLink = "https://twitcasting.tv/" + t.targetId
+	t.StreamingLink = "https://twitcasting.tv/" + t.TargetId
 	t.IsLive = infoJson.Get("movie").Get("live").MustBool()
 	t.Vid = strconv.Itoa(infoJson.Get("movie").Get("id").MustInt())
 }
 func (t *Twitacasting) CreateVideo(usersConfig UsersConfig) *VideoInfo {
-	videoTitle := t.targetId + "#" + t.Vid
+	videoTitle := t.TargetId + "#" + t.Vid
 	v := &VideoInfo{
 		Title:         videoTitle,
 		Date:          GetTimeNow(),
@@ -37,6 +37,7 @@ func (t *Twitacasting) CreateVideo(usersConfig UsersConfig) *VideoInfo {
 	return v
 }
 func (t *Twitacasting) CheckLive(usersConfig UsersConfig) bool {
+	t.TargetId = usersConfig.TargetId
 	t.getVideoInfo()
 	if !t.IsLive {
 		NoLiving("Twitcasting", usersConfig.Name)

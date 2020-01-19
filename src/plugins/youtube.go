@@ -3,7 +3,6 @@ package plugins
 import (
 	. "Vtb_Record/src/utils"
 	"github.com/bitly/go-simplejson"
-	"log"
 	"regexp"
 )
 
@@ -19,10 +18,7 @@ type Youtube struct {
 
 func (y *Youtube) getVideoInfo() yfConfig {
 	htmlBody := HttpGet(y.Url)
-	re, err := regexp.Compile(`ytplayer.config\s*=\s*([^\n]+?});`)
-	if err != nil {
-		log.Panicf("cannot find yfconfig")
-	}
+	re, _ := regexp.Compile(`ytplayer.config\s*=\s*([^\n]+?});`)
 	jsonYtConfig := re.FindSubmatch(htmlBody)[1]
 	ytConfigJson, _ := simplejson.NewJson(jsonYtConfig)
 	playerResponse, _ := simplejson.NewJson([]byte(ytConfigJson.Get("args").Get("player_response").MustString()))

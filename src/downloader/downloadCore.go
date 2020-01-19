@@ -6,7 +6,6 @@ import (
 	"log"
 )
 
-// TODO proxy support
 func addStreamlinkProxy(co []string) []string {
 	co = append(co, "--http-proxy", "http://"+utils.Config.Proxy, "--https-proxy", "https://"+utils.Config.Proxy)
 	return co

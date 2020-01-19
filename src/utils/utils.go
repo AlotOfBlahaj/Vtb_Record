@@ -3,6 +3,7 @@ package utils
 import (
 	"github.com/tmdvs/Go-Emoji-Utils"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,18 +13,33 @@ import (
 	"time"
 )
 
-func HttpGet(url string) []byte {
-	var client *http.Client
+var client *http.Client
+
+func init() {
+	createClient()
+}
+
+func createClient() *http.Client {
 	if Config.EnableProxy == true {
 		client = createSOCKS5Proxy()
 	} else {
 		client = http.DefaultClient
 	}
+	return client
+}
+
+func HttpGet(url string) []byte {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101 Firefox/60.0")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.8")
-	res, _ := client.Do(req)
+request:
+	res, err := client.Do(req)
+	if err != nil {
+		log.Printf("http request error %v", err)
+		goto request
+	}
 	htmlBody, _ := ioutil.ReadAll(res.Body)
+	res.Body.Close()
 	return htmlBody
 }
 func createSOCKS5Proxy() *http.Client {
