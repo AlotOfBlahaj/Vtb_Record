@@ -12,5 +12,5 @@ type VideoInfo struct {
 }
 
 func (v *VideoInfo) CreateLiveMsg() {
-	v.CQBotMsg = "[直播提示]" + "[" + v.Provider + "]" + v.Title + "正在直播" + "链接:" + v.Target
+	v.CQBotMsg = "[直播提示]" + "[" + v.Provider + "]" + v.Title + "正在直播" + "链接:" + v.Target + "[CQ:at,qq=all]"
 }

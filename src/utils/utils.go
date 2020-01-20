@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/tmdvs/Go-Emoji-Utils"
+	"github.com/fzxiao233/Go-Emoji-Utils"
 	"io/ioutil"
 	"log"
 	"net/http"
