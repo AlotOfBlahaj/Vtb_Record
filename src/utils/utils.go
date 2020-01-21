@@ -65,18 +65,22 @@ func IsFileExist(aFilepath string) bool {
 func GenerateFilepath(UserName string, VideoTitle string) string {
 	pathSlice := []string{Config.DownloadDir, UserName, RemoveIllegalChar(VideoTitle) + ".ts"}
 	aFilepath := strings.Join(pathSlice, "/")
-	dirPath := pathSlice[0] + "/" + pathSlice[1]
+	GenerateDownloadDir(UserName)
+	if IsFileExist(aFilepath) {
+		return changeName(aFilepath)
+	} else {
+		return aFilepath
+	}
+}
+func GenerateDownloadDir(UserName string) string {
+	dirPath := Config.DownloadDir + UserName
 	if !IsFileExist(dirPath) {
 		err := os.Mkdir(dirPath, 0775)
 		if err != nil {
 			panic("mkdir error")
 		}
 	}
-	if IsFileExist(aFilepath) {
-		return changeName(aFilepath)
-	} else {
-		return aFilepath
-	}
+	return dirPath
 }
 func changeName(aFilepath string) string {
 	dir, file := filepath.Split(aFilepath)

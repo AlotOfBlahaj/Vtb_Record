@@ -1,6 +1,7 @@
-package plugins
+package monitor
 
 import (
+	"Vtb_Record/src/plugins/structUtils"
 	. "Vtb_Record/src/utils"
 	"github.com/bitly/go-simplejson"
 	"regexp"
@@ -32,8 +33,8 @@ func (y *Youtube) getVideoInfo() yfConfig {
 	y.IsLive = IsLive
 	return y.yfConfig
 }
-func (y *Youtube) CreateVideo(usersConfig UsersConfig) *VideoInfo {
-	v := &VideoInfo{
+func (y *Youtube) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
+	v := &structUtils.VideoInfo{
 		Title:         y.Title,
 		Date:          GetTimeNow(),
 		Target:        y.Target,

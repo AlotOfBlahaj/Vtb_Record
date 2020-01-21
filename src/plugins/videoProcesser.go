@@ -1,70 +1,59 @@
 package plugins
 
 import (
-	"Vtb_Record/src/cqBot"
-	"Vtb_Record/src/downloader"
-	"Vtb_Record/src/uploader"
+	monitor2 "Vtb_Record/src/plugins/monitor"
+	"Vtb_Record/src/plugins/worker"
 	"Vtb_Record/src/utils"
 	"log"
-	"time"
 )
 
 type VideoPathList []string
-
-func ProcessVideo(video *utils.VideoInfo) {
-	log.Printf("%s|%s is living", video.Provider, video.UsersConfig.Name)
-	var end chan int
-	var liveStatus bool
-	liveStatus = true
-	go func() {
-		var VideoPathList VideoPathList
-		for {
-			if !video.UsersConfig.NeedDownload {
-				return
-			}
-			aFilePath := downloader.DownloadVideo(video)
-			VideoPathList = append(VideoPathList, aFilePath)
-			if !liveStatus {
-				if video.UsersConfig.NeedDownload {
-					videoName := VideoPathList.mergeVideo(video.Title)
-					uploader.UploadVideo(video, videoName, video.UsersConfig.DownloadDir+"/"+videoName, &uploader.PubsubUploader{})
-				}
-				end <- 1
-				break
-			}
-		}
-	}()
-	go func() {
-		_ = cqBot.CQBot(video)
-	}()
-	go func() {
-		ticker := time.NewTicker(time.Minute * 1)
-		for {
-			if !IsLiveAlive(video) {
-				liveStatus = false
-				if !video.UsersConfig.NeedDownload {
-					end <- 1
-				}
-				break
-			}
-			<-ticker.C
-		}
-	}()
-	<-end
+type ProcessVideo struct {
+	liveStatus    *LiveStatus
+	videoPathList VideoPathList
+	liveTrace     LiveTrace
+	monitor       monitor2.VideoMonitor
 }
-func IsLiveAlive(video *utils.VideoInfo) bool {
-	if CreateVideoMonitor(video.Provider).CheckLive(video.UsersConfig) {
-		log.Printf("%s|%s still living", video.Provider, video.UsersConfig.Name)
-		return true
+
+func (p *ProcessVideo) startDownloadVideo(ch chan string) {
+	if !p.liveStatus.video.UsersConfig.NeedDownload {
+		return
 	}
-	return false
+	for {
+		aFilePath := worker.DownloadVideo(p.liveStatus.video)
+		p.videoPathList = append(p.videoPathList, aFilePath)
+		if p.liveStatus != p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig) {
+			videoName := p.videoPathList.mergeVideo(p.liveStatus.video.Title)
+			ch <- videoName
+			break
+		}
+		log.Printf("%s|%s is living", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
+	}
+}
+
+func (p *ProcessVideo) StartProcessVideo() {
+	ch := make(chan string)
+	end := make(chan int)
+	go p.startDownloadVideo(ch)
+	video := p.liveStatus.video
+	go worker.CQBot(video)
+	go func(ch chan string) {
+		if !p.liveStatus.video.UsersConfig.NeedDownload {
+			return
+		}
+		video.FileName = <-ch
+		video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.FileName)
+		worker.UploadVideo(video)
+		worker.HlsVideo(video)
+		end <- 1
+	}(ch)
+	<-end
 }
 func (l VideoPathList) mergeVideo(mergedName string) string {
 	co := "concat:"
 	for _, aPath := range l {
 		co += aPath + "|"
 	}
-	mergedName += ".ts"
-	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", mergedName)
+	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", mergedName+".ts")
 	return mergedName
 }

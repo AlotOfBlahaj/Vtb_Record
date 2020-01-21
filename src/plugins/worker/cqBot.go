@@ -1,7 +1,7 @@
-package cqBot
+package worker
 
 import (
-	"Vtb_Record/src/utils"
+	"Vtb_Record/src/plugins/structUtils"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -18,7 +18,6 @@ type CQMsg struct {
 	Message string `json:"message"`
 }
 
-// Todo: cqBot support
 func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
 	client := &http.Client{}
 	JsonMsg, _ := json.Marshal(msg)
@@ -34,13 +33,13 @@ func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
 func (c *CQMsg) CreateCQMsg(groupId int) {
 	c.GroupId = groupId
 }
-func needCQBot(video *utils.VideoInfo) error {
+func needCQBot(video *structUtils.VideoInfo) error {
 	if !video.UsersConfig.NeedCQBot {
 		return errors.New(video.UsersConfig.Name + "needn't download")
 	}
 	return nil
 }
-func CQBot(video *utils.VideoInfo) error {
+func CQBot(video *structUtils.VideoInfo) error {
 	if err := needCQBot(video); err != nil {
 		return err
 	}
