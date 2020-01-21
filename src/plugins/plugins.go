@@ -27,7 +27,7 @@ func StartMonitor(monitor monitor.VideoMonitor, usersConfig utils.UsersConfig) {
 	for {
 		liveStatus := GetLiveStatus(monitor, usersConfig)
 		if liveStatus.isLive == true &&
-			!(LiveStatus.video.Title == liveStatus.video.Title && LiveStatus.video.Target == liveStatus.video.Target) {
+			(LiveStatus.video.Title != liveStatus.video.Title && LiveStatus.video.Target != liveStatus.video.Target) {
 			p.liveStatus = liveStatus
 			LiveStatus = liveStatus
 			go p.StartProcessVideo()

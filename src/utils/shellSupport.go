@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 )
@@ -16,23 +15,14 @@ func ExecShell(name string, arg ...string) string {
 	var errStdout, errStderr error
 	stdout := io.MultiWriter(os.Stdout, &stdoutBuf)
 	stderr := io.MultiWriter(os.Stderr, &stderrBuf)
-	err := co.Start()
-	if err != nil {
-		log.Fatalf("ffmpeg failed with '%s'\n", err)
-	}
+	_ = co.Start()
 	go func() {
 		_, errStdout = io.Copy(stdout, stdoutIn)
 	}()
 	go func() {
 		_, errStderr = io.Copy(stderr, stderrIn)
 	}()
-	err = co.Wait()
-	if err != nil {
-		log.Fatalf("ffmpeg failed with %s\n", err)
-	}
-	if errStdout != nil || errStderr != nil {
-		log.Fatal("failed to capture stdout or stderr\n")
-	}
+	_ = co.Wait()
 	outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())
 	//println(outStr + errStr)
 	return outStr + errStr

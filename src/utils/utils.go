@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -73,7 +74,7 @@ func GenerateFilepath(UserName string, VideoTitle string) string {
 	}
 }
 func GenerateDownloadDir(UserName string) string {
-	dirPath := Config.DownloadDir + UserName
+	dirPath := Config.DownloadDir + "/" + UserName
 	if !IsFileExist(dirPath) {
 		err := os.Mkdir(dirPath, 0775)
 		if err != nil {
@@ -85,8 +86,8 @@ func GenerateDownloadDir(UserName string) string {
 func changeName(aFilepath string) string {
 	dir, file := filepath.Split(aFilepath)
 	ext := path.Ext(file)
-	filename := path.Base(file)
-	filename += string(time.Now().Unix())
+	filename := strings.TrimSuffix(path.Base(file), ext)
+	filename += strconv.FormatInt(time.Now().Unix(), 10)
 	return dir + filename + ext
 }
 func GetTimeNow() string {
