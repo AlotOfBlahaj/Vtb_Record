@@ -1,13 +1,16 @@
-package utils
+package structUtils
+
+import "Vtb_Record/src/utils"
 
 type VideoInfo struct {
 	Title         string
 	Date          string
 	Target        string
 	Provider      string
+	FileName      string
 	FilePath      string
 	StreamingLink string
-	UsersConfig   UsersConfig
+	UsersConfig   utils.UsersConfig
 	CQBotMsg      string
 }
 

@@ -1,6 +1,7 @@
-package downloader
+package worker
 
 import (
+	"Vtb_Record/src/plugins/structUtils"
 	"Vtb_Record/src/utils"
 	"errors"
 	"log"
@@ -10,7 +11,7 @@ func addStreamlinkProxy(co []string) []string {
 	co = append(co, "--http-proxy", "http://"+utils.Config.Proxy, "--https-proxy", "https://"+utils.Config.Proxy)
 	return co
 }
-func downloadByStreamlink(video *utils.VideoInfo) {
+func downloadByStreamlink(video *structUtils.VideoInfo) {
 	arg := []string{"--hls-live-restart", "--force", "--hls-timeout", "120", "-o",
 		video.FilePath}
 	if utils.Config.EnableProxy {
@@ -20,16 +21,17 @@ func downloadByStreamlink(video *utils.VideoInfo) {
 	log.Println(arg)
 	utils.ExecShell("streamlink", arg...)
 }
-func needDownload(video *utils.VideoInfo) error {
+func needDownload(video *structUtils.VideoInfo) error {
 	if !video.UsersConfig.NeedDownload {
 		return errors.New(video.UsersConfig.Name + "needn't download")
 	}
 	return nil
 }
-func DownloadVideo(video *utils.VideoInfo) string {
+func DownloadVideo(video *structUtils.VideoInfo) string {
 	log.Printf("%s|%s start to download", video.Provider, video.UsersConfig.Name)
 	video.Title = utils.RemoveIllegalChar(video.Title)
 	video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.Title)
+	video.UsersConfig.DownloadDir = utils.GenerateDownloadDir(video.UsersConfig.Name)
 	if err := needDownload(video); err != nil {
 		return ""
 	}
