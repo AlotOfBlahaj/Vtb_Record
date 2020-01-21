@@ -23,7 +23,7 @@ func GetLiveStatus(monitor monitor.VideoMonitor, usersConfig utils.UsersConfig) 
 func StartMonitor(monitor monitor.VideoMonitor, usersConfig utils.UsersConfig) {
 	LiveStatus := &LiveStatus{}
 	ticker := time.NewTicker(time.Second * time.Duration(utils.Config.CheckSec))
-	p := &ProcessVideo{liveTrace: GetLiveStatus}
+	p := &ProcessVideo{liveTrace: GetLiveStatus, monitor: monitor}
 	for {
 		liveStatus := GetLiveStatus(monitor, usersConfig)
 		if liveStatus.isLive == true && liveStatus.video != LiveStatus.video {

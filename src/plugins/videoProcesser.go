@@ -28,12 +28,12 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 			ch <- videoName
 			break
 		}
-		log.Printf("%s|%s is still living", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
+		log.Printf("%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
 	}
 }
 
 func (p *ProcessVideo) StartProcessVideo() {
-	log.Printf("%s|%s is living", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
+	log.Printf("%s|%s is living. start to process", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
 	ch := make(chan string)
 	end := make(chan int)
 	go p.startDownloadVideo(ch)
@@ -52,7 +52,7 @@ func (p *ProcessVideo) StartProcessVideo() {
 				if p.liveStatus != p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig) {
 					end <- 1
 				} else {
-					log.Printf("%s|%s is still living", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
+					log.Printf("%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
 				}
 				<-ticker.C
 			}
