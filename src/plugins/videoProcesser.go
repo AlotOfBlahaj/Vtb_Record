@@ -5,6 +5,7 @@ import (
 	"Vtb_Record/src/plugins/worker"
 	"Vtb_Record/src/utils"
 	"log"
+	"time"
 )
 
 type VideoPathList []string
@@ -27,25 +28,35 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 			ch <- videoName
 			break
 		}
-		log.Printf("%s|%s is living", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
+		log.Printf("%s|%s is still living", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
 	}
 }
 
 func (p *ProcessVideo) StartProcessVideo() {
+	log.Printf("%s|%s is living", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
 	ch := make(chan string)
 	end := make(chan int)
 	go p.startDownloadVideo(ch)
 	video := p.liveStatus.video
 	go worker.CQBot(video)
 	go func(ch chan string) {
-		if !p.liveStatus.video.UsersConfig.NeedDownload {
-			return
+		if p.liveStatus.video.UsersConfig.NeedDownload {
+			video.FileName = <-ch
+			video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.FileName)
+			worker.UploadVideo(video)
+			worker.HlsVideo(video)
+			end <- 1
+		} else {
+			ticker := time.NewTicker(time.Second * 60)
+			for {
+				if p.liveStatus != p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig) {
+					end <- 1
+				} else {
+					log.Printf("%s|%s is still living", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
+				}
+				<-ticker.C
+			}
 		}
-		video.FileName = <-ch
-		video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.FileName)
-		worker.UploadVideo(video)
-		worker.HlsVideo(video)
-		end <- 1
 	}(ch)
 	<-end
 }
