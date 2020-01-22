@@ -17,7 +17,7 @@ import (
 var client *http.Client
 
 func init() {
-	createClient()
+	client = createClient()
 }
 
 func createClient() *http.Client {
@@ -64,9 +64,8 @@ func IsFileExist(aFilepath string) bool {
 	}
 }
 func GenerateFilepath(UserName string, VideoTitle string) string {
-	pathSlice := []string{Config.DownloadDir, UserName, RemoveIllegalChar(VideoTitle) + ".ts"}
+	pathSlice := []string{GenerateDownloadDir(UserName), RemoveIllegalChar(VideoTitle)}
 	aFilepath := strings.Join(pathSlice, "/")
-	GenerateDownloadDir(UserName)
 	if IsFileExist(aFilepath) {
 		return changeName(aFilepath)
 	} else {

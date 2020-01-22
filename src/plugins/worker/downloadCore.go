@@ -30,7 +30,7 @@ func needDownload(video *structUtils.VideoInfo) error {
 func DownloadVideo(video *structUtils.VideoInfo) string {
 	log.Printf("%s|%s start to download", video.Provider, video.UsersConfig.Name)
 	video.Title = utils.RemoveIllegalChar(video.Title)
-	video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.Title)
+	video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.Title+".ts")
 	video.UsersConfig.DownloadDir = utils.GenerateDownloadDir(video.UsersConfig.Name)
 	if err := needDownload(video); err != nil {
 		return ""
