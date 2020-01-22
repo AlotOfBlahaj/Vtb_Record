@@ -20,7 +20,15 @@ type Youtube struct {
 func (y *Youtube) getVideoInfo() yfConfig {
 	htmlBody := HttpGet(y.Url)
 	re, _ := regexp.Compile(`ytplayer.config\s*=\s*([^\n]+?});`)
-	jsonYtConfig := re.FindSubmatch(htmlBody)[1]
+	result := re.FindSubmatch(htmlBody)
+	if len(result) < 1 {
+		return yfConfig{
+			IsLive: false,
+			Title:  "",
+			Target: "",
+		}
+	}
+	jsonYtConfig := result[1]
 	ytConfigJson, _ := simplejson.NewJson(jsonYtConfig)
 	playerResponse, _ := simplejson.NewJson([]byte(ytConfigJson.Get("args").Get("player_response").MustString()))
 	videoDetails := playerResponse.Get("videoDetails")
