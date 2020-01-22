@@ -8,7 +8,7 @@ import (
 )
 
 func addStreamlinkProxy(co []string) []string {
-	co = append(co, "--http-proxy", "http://"+utils.Config.Proxy, "--https-proxy", "https://"+utils.Config.Proxy)
+	co = append(co, "--http-proxy", "socks5://"+utils.Config.Proxy)
 	return co
 }
 func downloadByStreamlink(video *structUtils.VideoInfo) {
