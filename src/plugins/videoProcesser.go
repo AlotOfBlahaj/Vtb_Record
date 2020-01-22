@@ -22,6 +22,9 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 	}
 	for {
 		aFilePath := worker.DownloadVideo(p.liveStatus.video)
+		if aFilePath == "" {
+			continue
+		}
 		p.videoPathList = append(p.videoPathList, aFilePath)
 		if p.liveStatus != p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig) {
 			videoName := p.liveStatus.video.Title + ".ts"
@@ -38,10 +41,10 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 func (p *ProcessVideo) StartProcessVideo() {
 	log.Printf("%s|%s is living. start to process", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
 	ch := make(chan string)
-	end := make(chan int)
-	go p.startDownloadVideo(ch)
 	video := p.liveStatus.video
-	//go worker.CQBot(video)
+	end := make(chan int)
+	go worker.CQBot(video)
+	go p.startDownloadVideo(ch)
 	go func(ch chan string) {
 		if p.liveStatus.video.UsersConfig.NeedDownload {
 			video.FileName = <-ch

@@ -44,7 +44,7 @@ func DownloadVideo(video *structUtils.VideoInfo) string {
 		downloadByStreamlink(video)
 	}
 	if !utils.IsFileExist(video.FilePath) {
-		log.Fatal("downloader: the video file don't exist")
+		log.Printf("downloader: %s the video file don't exist", video.Title)
 		return ""
 	}
 	return video.FilePath
