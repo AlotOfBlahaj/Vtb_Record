@@ -1,7 +1,7 @@
 package plugins
 
 import (
-	monitor2 "Vtb_Record/src/plugins/monitor"
+	"Vtb_Record/src/plugins/monitor"
 	"Vtb_Record/src/plugins/worker"
 	"Vtb_Record/src/utils"
 	"log"
@@ -13,7 +13,7 @@ type ProcessVideo struct {
 	liveStatus    *LiveStatus
 	videoPathList VideoPathList
 	liveTrace     LiveTrace
-	monitor       monitor2.VideoMonitor
+	monitor       monitor.VideoMonitor
 }
 
 func (p *ProcessVideo) startDownloadVideo(ch chan string) {
@@ -24,7 +24,10 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 		aFilePath := worker.DownloadVideo(p.liveStatus.video)
 		p.videoPathList = append(p.videoPathList, aFilePath)
 		if p.liveStatus != p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig) {
-			videoName := p.videoPathList.mergeVideo(p.liveStatus.video.Title)
+			videoName := p.liveStatus.video.Title + ".ts"
+			if len(p.videoPathList) > 1 {
+				videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
+			}
 			ch <- videoName
 			break
 		}
@@ -38,7 +41,7 @@ func (p *ProcessVideo) StartProcessVideo() {
 	end := make(chan int)
 	go p.startDownloadVideo(ch)
 	video := p.liveStatus.video
-	go worker.CQBot(video)
+	//go worker.CQBot(video)
 	go func(ch chan string) {
 		if p.liveStatus.video.UsersConfig.NeedDownload {
 			video.FileName = <-ch
@@ -60,11 +63,13 @@ func (p *ProcessVideo) StartProcessVideo() {
 	}(ch)
 	<-end
 }
-func (l VideoPathList) mergeVideo(mergedName string) string {
+func (l VideoPathList) mergeVideo(Title string, downloadDir string) string {
 	co := "concat:"
 	for _, aPath := range l {
 		co += aPath + "|"
 	}
-	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", mergedName+".ts")
+	mergedName := Title + "_merged.ts"
+	mergedPath := downloadDir + mergedName
+	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", mergedPath)
 	return mergedName
 }

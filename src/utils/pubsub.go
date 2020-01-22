@@ -5,7 +5,7 @@ import "github.com/go-redis/redis"
 var RedisClient *redis.Client
 
 func init() {
-	initRedis()
+	RedisClient = initRedis()
 }
 func initRedis() *redis.Client {
 	RedisClient := redis.NewClient(
