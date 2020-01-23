@@ -17,7 +17,7 @@ type ProcessVideo struct {
 }
 
 func (p *ProcessVideo) startDownloadVideo(ch chan string) {
-	if !p.liveStatus.video.UsersConfig.NeedDownload {
+	if p.isNeedDownload() {
 		return
 	}
 	for {
@@ -38,6 +38,10 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 	}
 }
 
+func (p *ProcessVideo) isNeedDownload() bool {
+	return p.liveStatus.video.UsersConfig.NeedDownload
+}
+
 func (p *ProcessVideo) StartProcessVideo() {
 	log.Printf("%s|%s is living. start to process", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
 	ch := make(chan string)
@@ -45,27 +49,36 @@ func (p *ProcessVideo) StartProcessVideo() {
 	end := make(chan int)
 	go worker.CQBot(video)
 	go p.startDownloadVideo(ch)
-	go func(ch chan string) {
-		if p.liveStatus.video.UsersConfig.NeedDownload {
-			video.FileName = <-ch
-			video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.FileName)
-			worker.UploadVideo(video)
-			worker.HlsVideo(video)
-			end <- 1
-		} else {
-			ticker := time.NewTicker(time.Second * 60)
-			for {
-				if p.liveStatus != p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig) {
-					end <- 1
-				} else {
-					log.Printf("%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
-				}
-				<-ticker.C
-			}
-		}
-	}(ch)
+	if p.isNeedDownload() {
+		go p.distributeVideo(end, <-ch)
+	} else {
+		go p.keepLiveAlive(end)
+	}
 	<-end
 }
+
+func (p *ProcessVideo) distributeVideo(end chan int, fileName string) string {
+	video := p.liveStatus.video
+	video.FileName = fileName
+	video.FilePath = video.UsersConfig.DownloadDir + "/" + video.FileName
+	worker.UploadVideo(video)
+	worker.HlsVideo(video)
+	end <- 1
+	return video.FilePath
+}
+
+func (p *ProcessVideo) keepLiveAlive(end chan int) {
+	ticker := time.NewTicker(time.Second * 60)
+	for {
+		if p.liveStatus != p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig) {
+			end <- 1
+		} else {
+			log.Printf("%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
+		}
+		<-ticker.C
+	}
+}
+
 func (l VideoPathList) mergeVideo(Title string, downloadDir string) string {
 	co := "concat:"
 	for _, aPath := range l {
