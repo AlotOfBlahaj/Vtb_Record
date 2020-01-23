@@ -17,9 +17,6 @@ type ProcessVideo struct {
 }
 
 func (p *ProcessVideo) startDownloadVideo(ch chan string) {
-	if p.isNeedDownload() {
-		return
-	}
 	for {
 		aFilePath := worker.DownloadVideo(p.liveStatus.video)
 		if aFilePath == "" {
@@ -48,8 +45,8 @@ func (p *ProcessVideo) StartProcessVideo() {
 	video := p.liveStatus.video
 	end := make(chan int)
 	go worker.CQBot(video)
-	go p.startDownloadVideo(ch)
 	if p.isNeedDownload() {
+		go p.startDownloadVideo(ch)
 		go p.distributeVideo(end, <-ch)
 	} else {
 		go p.keepLiveAlive(end)
