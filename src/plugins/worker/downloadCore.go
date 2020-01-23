@@ -3,7 +3,6 @@ package worker
 import (
 	"Vtb_Record/src/plugins/structUtils"
 	"Vtb_Record/src/utils"
-	"errors"
 	"log"
 )
 
@@ -18,23 +17,15 @@ func downloadByStreamlink(video *structUtils.VideoInfo) {
 		arg = addStreamlinkProxy(arg)
 	}
 	arg = append(arg, video.Target, utils.Config.DownloadQuality)
-	log.Println(arg)
+	log.Printf("start to download %s", video.FilePath)
 	utils.ExecShell("streamlink", arg...)
 }
-func needDownload(video *structUtils.VideoInfo) error {
-	if !video.UsersConfig.NeedDownload {
-		return errors.New(video.UsersConfig.Name + "needn't download")
-	}
-	return nil
-}
+
 func DownloadVideo(video *structUtils.VideoInfo) string {
 	log.Printf("%s|%s start to download", video.Provider, video.UsersConfig.Name)
 	video.Title = utils.RemoveIllegalChar(video.Title)
 	video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.Title+".ts")
 	video.UsersConfig.DownloadDir = utils.GenerateDownloadDir(video.UsersConfig.Name)
-	if err := needDownload(video); err != nil {
-		return ""
-	}
 	switch video.Provider {
 	case "Youtube":
 		//video = getStreamingLink(video)
@@ -47,5 +38,6 @@ func DownloadVideo(video *structUtils.VideoInfo) string {
 		log.Printf("downloader: %s the video file don't exist", video.Title)
 		return ""
 	}
+	log.Printf("%s download successfully", video.FilePath)
 	return video.FilePath
 }
