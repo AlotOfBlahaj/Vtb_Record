@@ -23,7 +23,10 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 			continue
 		}
 		p.videoPathList = append(p.videoPathList, aFilePath)
-		if p.liveStatus != p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig) {
+                LiveStatus := p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig)
+		if LiveStatus.isLive == false ||
+			(LiveStatus.video.Title != p.liveStatus.video.Title || LiveStatus.video.Target != p.liveStatus.video.Target)
+                {
 			videoName := p.liveStatus.video.Title + ".ts"
 			if len(p.videoPathList) > 1 {
 				videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
