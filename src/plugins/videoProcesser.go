@@ -23,12 +23,14 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 			continue
 		}
 		p.videoPathList = append(p.videoPathList, aFilePath)
-                LiveStatus := p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig)
+		LiveStatus := p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig)
 		if LiveStatus.isLive == false ||
 			(LiveStatus.video.Title != p.liveStatus.video.Title || LiveStatus.video.Target != p.liveStatus.video.Target) {
 			videoName := p.liveStatus.video.Title + ".ts"
 			if len(p.videoPathList) > 1 {
 				videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
+			} else {
+				videoName = ts2mp4(aFilePath, p.liveStatus.video.UsersConfig.DownloadDir, p.liveStatus.video.Title)
 			}
 			ch <- videoName
 			break
@@ -61,7 +63,7 @@ func (p *ProcessVideo) distributeVideo(end chan int, fileName string) string {
 	video.FileName = fileName
 	video.FilePath = video.UsersConfig.DownloadDir + "/" + video.FileName
 	worker.UploadVideo(video)
-	worker.HlsVideo(video)
+	//worker.HlsVideo(video)
 	end <- 1
 	return video.FilePath
 }
@@ -83,8 +85,14 @@ func (l VideoPathList) mergeVideo(Title string, downloadDir string) string {
 	for _, aPath := range l {
 		co += aPath + "|"
 	}
-	mergedName := Title + "_merged.ts"
+	mergedName := Title + "_merged.mp4"
 	mergedPath := downloadDir + mergedName
-	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", mergedPath)
+	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", "-f", "mp4", mergedPath)
 	return mergedName
+}
+
+func ts2mp4(tsPath string, downloadDir string, title string) string {
+	mp4Path := downloadDir + "/" + title + ".mp4"
+	utils.ExecShell("ffmpeg", "-i", tsPath, "-c", "copy", "-f", "mp4", mp4Path)
+	return title + ".mp4"
 }
