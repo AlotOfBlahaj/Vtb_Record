@@ -26,14 +26,7 @@ func DownloadVideo(video *structUtils.VideoInfo) string {
 	video.Title = utils.RemoveIllegalChar(video.Title)
 	video.FilePath = utils.GenerateFilepath(video.UsersConfig.Name, video.Title+".ts")
 	video.UsersConfig.DownloadDir = utils.GenerateDownloadDir(video.UsersConfig.Name)
-	switch video.Provider {
-	case "Youtube":
-		//video = getStreamingLink(video)
-		//downloadByFFMPEG(video)
-		downloadByStreamlink(video)
-	case "Twitcasting":
-		downloadByStreamlink(video)
-	}
+	downloadByStreamlink(video)
 	if !utils.IsFileExist(video.FilePath) {
 		log.Printf("downloader: %s the video file don't exist", video.Title)
 		return ""
