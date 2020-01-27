@@ -1,4 +1,4 @@
-# Vtb_Record Vtuber直播监控-录播|QQ提醒|hls切片
+# Vtb_Record Vtuber直播监控-录播|QQ提醒
 
 ## 介绍
 
@@ -8,7 +8,7 @@
 
 - QQ提醒
 - 视频下载
-- 视频上传(包含源和hls流)
+- 视频上传
 - 同传记录
 
 等功能
@@ -18,6 +18,8 @@
 - Youtube
 
 - Twitcasting
+
+- Bilibili
 
 ## 特性
 
