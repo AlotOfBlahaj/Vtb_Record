@@ -86,7 +86,7 @@ func (l VideoPathList) mergeVideo(Title string, downloadDir string) string {
 		co += aPath + "|"
 	}
 	mergedName := Title + "_merged.mp4"
-	mergedPath := downloadDir + mergedName
+	mergedPath := downloadDir + "/" + mergedName
 	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", "-f", "mp4", mergedPath)
 	return mergedName
 }
