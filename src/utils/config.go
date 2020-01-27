@@ -9,16 +9,14 @@ import (
 var Config *MainConfig
 
 type UsersConfig struct {
-	TargetId        string
-	Name            string
-	BilibiliLive    bool
-	BilibiliArticle bool
-	DownloadDir     string
-	NeedDownload    bool
-	NeedCQBot       bool
-	QQGroupID       []int
-	CQHost          string
-	CQToken         string
+	TargetId     string
+	Name         string
+	DownloadDir  string
+	NeedDownload bool
+	NeedCQBot    bool
+	QQGroupID    []int
+	CQHost       string
+	CQToken      string
 }
 type ModuleConfig struct {
 	Name       string

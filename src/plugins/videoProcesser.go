@@ -19,6 +19,7 @@ type ProcessVideo struct {
 func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 	for {
 		aFilePath := worker.DownloadVideo(p.liveStatus.video)
+		time.Sleep(time.Millisecond * 100)
 		if aFilePath == "" {
 			continue
 		}

@@ -3,8 +3,6 @@
   "Proxy": "127.0.0.1:10800",
   "RedisHost": "127.0.0.1:6379",
   "CheckSec": 30,
-  "BotHost": "",
-  "BotToken": "",
   "DownloadQuality": "best",
   "DownloadDir": "",
   "Module": [
@@ -15,7 +13,8 @@
       "Users": [
         {
           "TargetId": "UCQ0UDLQCjY0rmuxCDE38FGg",
-          "Name": "natsuiromatsuri"
+          "Name": "natsuiromatsuri",
+          "NeedDownload": true
         }
       ]
     },
@@ -25,13 +24,14 @@
       "Users": [
         {
           "TargetId": "natsuiromatsuri",
-          "Name": "natsuiromatsuri"
+          "Name": "natsuiromatsuri",
+          "NeedDownload": true
         }
       ]
     },
     {
       "Name": "Mirrativ",
-      "Enable": true,
+      "Enable": false,
       "Users": [
         {
           "TargetId": "3264432",
@@ -46,8 +46,19 @@
         {
           "TargetId": "336731767",
           "Name": "natsuiromatsuri",
-          "Live": false,
-          "Article": false
+          "NeedDownload": true
+        }
+      ]
+    },
+    {
+      "Name": "BilibiliArticle",
+      "Enable": false,
+      "Users": [
+        {
+          "TargetId": "420711844"
+        },
+        {
+          "TargetId": "418124907"
         }
       ]
     }

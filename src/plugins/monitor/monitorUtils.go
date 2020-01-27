@@ -12,6 +12,8 @@ func CreateVideoMonitor(moduleName string) VideoMonitor {
 		return &Youtube{}
 	case "Twitcasting":
 		return &Twitacasting{}
+	case "Bilibili":
+		return &Bilibili{}
 	default:
 		return nil
 	}

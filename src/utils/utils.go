@@ -100,3 +100,11 @@ func RemoveIllegalChar(Title string) string {
 	}
 	return Title
 }
+
+func I2b(i int) bool {
+	if i != 0 {
+		return true
+	} else {
+		return false
+	}
+}
