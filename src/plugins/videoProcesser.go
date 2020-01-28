@@ -64,7 +64,6 @@ func (p *ProcessVideo) distributeVideo(end chan int, fileName string) string {
 	video.FileName = fileName
 	video.FilePath = video.UsersConfig.DownloadDir + "/" + video.FileName
 	worker.UploadVideo(video)
-	//worker.HlsVideo(video)
 	end <- 1
 	return video.FilePath
 }
@@ -86,14 +85,14 @@ func (l VideoPathList) mergeVideo(Title string, downloadDir string) string {
 	for _, aPath := range l {
 		co += aPath + "|"
 	}
-	mergedName := Title + "_merged.mp4"
+	mergedName := utils.ChangeName(Title + "_merged.mp4")
 	mergedPath := downloadDir + "/" + mergedName
 	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", "-f", "mp4", mergedPath)
 	return mergedName
 }
 
 func ts2mp4(tsPath string, downloadDir string, title string) string {
-	mp4Path := downloadDir + "/" + title + ".mp4"
+	mp4Path := downloadDir + "/" + utils.ChangeName(title+".mp4")
 	utils.ExecShell("ffmpeg", "-i", tsPath, "-c", "copy", "-f", "mp4", mp4Path)
 	return title + ".mp4"
 }
