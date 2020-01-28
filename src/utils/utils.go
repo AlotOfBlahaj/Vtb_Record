@@ -67,7 +67,7 @@ func GenerateFilepath(UserName string, VideoTitle string) string {
 	pathSlice := []string{GenerateDownloadDir(UserName), RemoveIllegalChar(VideoTitle)}
 	aFilepath := strings.Join(pathSlice, "/")
 	if IsFileExist(aFilepath) {
-		return changeName(aFilepath)
+		return ChangeName(aFilepath)
 	} else {
 		return aFilepath
 	}
@@ -82,7 +82,7 @@ func GenerateDownloadDir(UserName string) string {
 	}
 	return dirPath
 }
-func changeName(aFilepath string) string {
+func ChangeName(aFilepath string) string {
 	dir, file := filepath.Split(aFilepath)
 	ext := path.Ext(file)
 	filename := strings.TrimSuffix(path.Base(file), ext)
