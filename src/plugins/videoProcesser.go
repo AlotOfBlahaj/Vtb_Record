@@ -92,7 +92,8 @@ func (l VideoPathList) mergeVideo(Title string, downloadDir string) string {
 }
 
 func ts2mp4(tsPath string, downloadDir string, title string) string {
-	mp4Path := downloadDir + "/" + utils.ChangeName(title+".mp4")
+	mp4Name := utils.ChangeName(title + ".mp4")
+	mp4Path := downloadDir + "/" + mp4Name
 	utils.ExecShell("ffmpeg", "-i", tsPath, "-c", "copy", "-f", "mp4", mp4Path)
-	return title + ".mp4"
+	return mp4Name
 }
