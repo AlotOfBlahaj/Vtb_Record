@@ -4,6 +4,7 @@ import (
 	"Vtb_Record/src/plugins/structUtils"
 	. "Vtb_Record/src/utils"
 	"github.com/bitly/go-simplejson"
+	"log"
 	"regexp"
 )
 
@@ -39,6 +40,7 @@ func (y *Youtube) getVideoInfo() yfConfig {
 	y.Title = videoDetails.Get("title").MustString()
 	y.Target = "https://www.youtube.com/watch?v=" + videoDetails.Get("videoId").MustString()
 	y.IsLive = IsLive
+	log.Printf("%+v", y)
 	return y.yfConfig
 }
 func (y *Youtube) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
