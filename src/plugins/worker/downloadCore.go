@@ -11,7 +11,7 @@ func addStreamlinkProxy(co []string) []string {
 	return co
 }
 func downloadByStreamlink(video *structUtils.VideoInfo) {
-	arg := []string{"--hls-live-restart", "--force", "--hls-timeout", "120", "-o",
+	arg := []string{"--force", "-o",
 		video.FilePath}
 	if utils.Config.EnableProxy {
 		arg = addStreamlinkProxy(arg)
