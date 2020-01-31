@@ -5,6 +5,7 @@ import (
 	"Vtb_Record/src/plugins/worker"
 	"Vtb_Record/src/utils"
 	"log"
+	"os"
 	"time"
 )
 
@@ -88,6 +89,9 @@ func (l VideoPathList) mergeVideo(Title string, downloadDir string) string {
 	mergedName := utils.ChangeName(Title + "_merged.mp4")
 	mergedPath := downloadDir + "/" + mergedName
 	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", "-f", "mp4", mergedPath)
+	for _, aPath := range l {
+		_ = os.Remove(aPath)
+	}
 	return mergedName
 }
 
@@ -95,5 +99,6 @@ func ts2mp4(tsPath string, downloadDir string, title string) string {
 	mp4Name := utils.ChangeName(title + ".mp4")
 	mp4Path := downloadDir + "/" + mp4Name
 	utils.ExecShell("ffmpeg", "-i", tsPath, "-c", "copy", "-f", "mp4", mp4Path)
+	_ = os.Remove(tsPath)
 	return mp4Name
 }
