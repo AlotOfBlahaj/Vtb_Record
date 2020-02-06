@@ -17,6 +17,7 @@ type UsersConfig struct {
 	QQGroupID    []int
 	CQHost       string
 	CQToken      string
+	TransBiliId  string
 }
 type ModuleConfig struct {
 	Name       string
@@ -32,6 +33,7 @@ type MainConfig struct {
 	DownloadDir     string
 	Module          []ModuleConfig
 	RedisHost       string
+	ExpressPort     string
 }
 
 func init() {
