@@ -17,7 +17,6 @@ type UploadDict struct {
 	ASS          string
 	Txt          string
 	OriginTarget string `json:"originTarget"`
-	TransPath    string `json:"transPath"`
 }
 
 func UploadVideo(video *structUtils.VideoInfo) {
@@ -29,9 +28,8 @@ func UploadVideo(video *structUtils.VideoInfo) {
 		User:         video.UsersConfig.Name,
 		OriginTitle:  video.Title,
 		ASS:          "",
-		Txt:          "",
+		Txt:          video.TransRecordPath,
 		OriginTarget: video.Target,
-		TransPath:    video.TransRecordPath,
 	}
 	data, _ := json.Marshal(u)
 	log.Println(string(data))
