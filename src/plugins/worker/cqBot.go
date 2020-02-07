@@ -24,11 +24,12 @@ func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
 	req, _ := http.NewRequest("POST", "http://"+cc.CQHost+"/send_group_msg", bytes.NewBuffer(JsonMsg))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+cc.CQToken)
-	resp, err := client.Do(req)
+	_, err := client.Do(req)
 	if err != nil {
 		log.Print("CQbot error")
+	} else {
+		log.Printf("%s", msg.Message)
 	}
-	log.Print(resp.StatusCode)
 }
 func (c *CQMsg) CreateCQMsg(groupId int) {
 	c.GroupId = groupId
