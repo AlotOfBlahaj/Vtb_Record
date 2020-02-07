@@ -20,7 +20,8 @@ func getRoomId(targetId string) string {
 	if err != nil {
 		log.Printf("%s parse json error", targetId)
 	}
-	roomId := respJson.Get("data").Get("roomid").MustString()
+	data := respJson.Get("data")
+	roomId := strconv.Itoa(data.Get("roomid").MustInt())
 	return roomId
 }
 
@@ -29,8 +30,8 @@ func StartRecord(video *structUtils.VideoInfo) string {
 		return ""
 	}
 	filename := video.UsersConfig.TransBiliId + "_" + strconv.FormatInt(time.Now().Unix(), 10) + ".txt"
-	aFilePath := video.UsersConfig.DownloadDir + "/" + filename
-	go callJsApi(getRoomId(video.UsersConfig.TransBiliId), string(1), filename)
+	aFilePath := utils.GenerateDownloadDir(video.UsersConfig.Name) + "/" + filename
+	go callJsApi(getRoomId(video.UsersConfig.TransBiliId), "1", filename)
 	return aFilePath
 }
 
@@ -38,5 +39,5 @@ func CloseRecord(video *structUtils.VideoInfo) {
 	if video.UsersConfig.TransBiliId == "" {
 		return
 	}
-	callJsApi(getRoomId(video.UsersConfig.TransBiliId), string(0), "")
+	callJsApi(getRoomId(video.UsersConfig.TransBiliId), "0", "")
 }

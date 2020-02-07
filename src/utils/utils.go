@@ -77,7 +77,7 @@ func GenerateDownloadDir(UserName string) string {
 	if !IsFileExist(dirPath) {
 		err := os.Mkdir(dirPath, 0775)
 		if err != nil {
-			panic("mkdir error")
+			log.Fatalf("mkdir error: %s", dirPath)
 		}
 	}
 	return dirPath
