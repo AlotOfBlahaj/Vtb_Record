@@ -28,7 +28,7 @@ func UploadVideo(video *structUtils.VideoInfo) {
 		User:         video.UsersConfig.Name,
 		OriginTitle:  video.Title,
 		ASS:          "",
-		Txt:          "",
+		Txt:          video.TransRecordPath,
 		OriginTarget: video.Target,
 	}
 	data, _ := json.Marshal(u)

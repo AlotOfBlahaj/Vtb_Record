@@ -52,12 +52,16 @@ func (p *ProcessVideo) StartProcessVideo() {
 	end := make(chan int)
 	go worker.CQBot(video)
 	if p.isNeedDownload() {
+
+		p.liveStatus.video.TransRecordPath = worker.StartRecord(video)
+
 		go p.startDownloadVideo(ch)
 		go p.distributeVideo(end, <-ch)
 	} else {
 		go p.keepLiveAlive(end)
 	}
 	<-end
+	worker.CloseRecord(video)
 }
 
 func (p *ProcessVideo) distributeVideo(end chan int, fileName string) string {

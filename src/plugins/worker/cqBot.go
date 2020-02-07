@@ -26,7 +26,7 @@ func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
 	req.Header.Set("Authorization", "Bearer "+cc.CQToken)
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Panicf("CQbot error")
+		log.Print("CQbot error")
 	}
 	log.Print(resp.StatusCode)
 }

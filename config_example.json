@@ -3,6 +3,7 @@
   "Proxy": "127.0.0.1:10800",
   "RedisHost": "127.0.0.1:6379",
   "CheckSec": 30,
+  "ExpressPort": 3000,
   "DownloadQuality": "best",
   "DownloadDir": "",
   "Module": [
