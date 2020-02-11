@@ -25,9 +25,7 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 			continue
 		}
 		p.videoPathList = append(p.videoPathList, aFilePath)
-		LiveStatus := p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig)
-		if LiveStatus.isLive == false ||
-			(LiveStatus.video.Title != p.liveStatus.video.Title || LiveStatus.video.Target != p.liveStatus.video.Target) {
+		if p.isNewLive() {
 			videoName := p.liveStatus.video.Title + ".ts"
 			if len(p.videoPathList) > 1 {
 				videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
@@ -37,7 +35,6 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 			ch <- videoName
 			break
 		}
-		log.Printf("%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
 	}
 }
 
@@ -46,7 +43,7 @@ func (p *ProcessVideo) isNeedDownload() bool {
 }
 
 func (p *ProcessVideo) StartProcessVideo() {
-	log.Printf("%s|%s is living. start to process", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
+	log.Printf("%s|%s|%s is living. start to process", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
 	ch := make(chan string)
 	video := p.liveStatus.video
 	end := make(chan int)
@@ -74,14 +71,24 @@ func (p *ProcessVideo) distributeVideo(end chan int, fileName string) string {
 }
 
 func (p *ProcessVideo) keepLiveAlive(end chan int) {
-	ticker := time.NewTicker(time.Second * 60)
+	ticker := time.NewTicker(time.Second * 2)
 	for {
-		if p.liveStatus != p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig) {
+		if p.isNewLive() {
 			end <- 1
-		} else {
-			log.Printf("%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name)
+			return
 		}
 		<-ticker.C
+	}
+}
+
+func (p *ProcessVideo) isNewLive() bool {
+	newLiveStatus := p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig)
+	if p.liveStatus.isLive == false || p.liveStatus.video.Title != newLiveStatus.video.Title || p.liveStatus.video.StreamingLink != newLiveStatus.video.StreamingLink {
+		log.Printf("%s|%s|%s is new live or offline", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
+		return true
+	} else {
+		log.Printf("%s|%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
+		return false
 	}
 }
 
