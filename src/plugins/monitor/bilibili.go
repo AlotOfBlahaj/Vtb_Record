@@ -4,7 +4,6 @@ import (
 	"Vtb_Record/src/plugins/structUtils"
 	. "Vtb_Record/src/utils"
 	"github.com/bitly/go-simplejson"
-	"log"
 )
 
 type Bilibili struct {
@@ -21,7 +20,7 @@ func (b *Bilibili) getVideoInfo() {
 	b.streamingLink = data.Get("url").MustString()
 	b.Title = data.Get("title").MustString()
 	b.isLive = I2b(data.Get("liveStatus").MustInt())
-	log.Printf("%+v", b)
+	//log.Printf("%+v", b)
 }
 
 func (b *Bilibili) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {

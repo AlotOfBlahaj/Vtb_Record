@@ -21,16 +21,13 @@ func GetLiveStatus(monitor monitor.VideoMonitor, usersConfig utils.UsersConfig) 
 }
 
 func StartMonitor(monitor monitor.VideoMonitor, usersConfig utils.UsersConfig) {
-	LiveStatus := &LiveStatus{video: &structUtils.VideoInfo{}}
 	ticker := time.NewTicker(time.Second * time.Duration(utils.Config.CheckSec))
 	for {
 		p := &ProcessVideo{liveTrace: GetLiveStatus, monitor: monitor}
-                liveStatus := GetLiveStatus(monitor, usersConfig)
-		if liveStatus.isLive == true &&
-			(LiveStatus.video.Title != liveStatus.video.Title && LiveStatus.video.Target != liveStatus.video.Target) {
+		liveStatus := GetLiveStatus(monitor, usersConfig)
+		if liveStatus.isLive == true {
 			p.liveStatus = liveStatus
-			LiveStatus = liveStatus
-			go p.StartProcessVideo()
+			p.StartProcessVideo()
 		}
 		<-ticker.C
 	}
