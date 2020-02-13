@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-type Twitacasting struct {
+type Twitcasting struct {
 	TargetId string
 	twitcastingVideoInfo
 }
@@ -17,7 +17,7 @@ type twitcastingVideoInfo struct {
 	Vid           string
 }
 
-func (t *Twitacasting) getVideoInfo() {
+func (t *Twitcasting) getVideoInfo() {
 	rawInfoJson := HttpGet("https://twitcasting.tv/streamserver.php?target=" + t.TargetId + "&mode=client")
 	infoJson, _ := simplejson.NewJson(rawInfoJson)
 	t.StreamingLink = "https://twitcasting.tv/" + t.TargetId
@@ -25,7 +25,7 @@ func (t *Twitacasting) getVideoInfo() {
 	t.Vid = strconv.Itoa(infoJson.Get("movie").Get("id").MustInt())
 	//log.Printf("%+v", t)
 }
-func (t *Twitacasting) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
+func (t *Twitcasting) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
 	videoTitle := t.TargetId + "#" + t.Vid
 	v := &structUtils.VideoInfo{
 		Title:         videoTitle,
@@ -38,7 +38,7 @@ func (t *Twitacasting) CreateVideo(usersConfig UsersConfig) *structUtils.VideoIn
 	v.CreateLiveMsg()
 	return v
 }
-func (t *Twitacasting) CheckLive(usersConfig UsersConfig) bool {
+func (t *Twitcasting) CheckLive(usersConfig UsersConfig) bool {
 	t.TargetId = usersConfig.TargetId
 	t.getVideoInfo()
 	if !t.IsLive {
