@@ -71,7 +71,7 @@ func (p *ProcessVideo) distributeVideo(end chan int, fileName string) string {
 }
 
 func (p *ProcessVideo) keepLiveAlive(end chan int) {
-	ticker := time.NewTicker(time.Second * 2)
+	ticker := time.NewTicker(time.Second * 30)
 	for {
 		if p.isNewLive() {
 			end <- 1
@@ -83,7 +83,7 @@ func (p *ProcessVideo) keepLiveAlive(end chan int) {
 
 func (p *ProcessVideo) isNewLive() bool {
 	newLiveStatus := p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig)
-	if p.liveStatus.isLive == false || p.liveStatus.video.Title != newLiveStatus.video.Title || p.liveStatus.video.StreamingLink != newLiveStatus.video.StreamingLink {
+	if newLiveStatus.isLive == false || (p.liveStatus.isLive == true && p.liveStatus.video.Title != newLiveStatus.video.Title || p.liveStatus.video.StreamingLink != newLiveStatus.video.StreamingLink) {
 		log.Printf("%s|%s|%s is new live or offline", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
 		return true
 	} else {
