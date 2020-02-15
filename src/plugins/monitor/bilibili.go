@@ -16,10 +16,9 @@ type Bilibili struct {
 func (b *Bilibili) getVideoInfo() {
 	rawInfoJson := HttpGet("https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid=" + b.TargetId)
 	infoJson, _ := simplejson.NewJson(rawInfoJson)
-	data := infoJson.Get("data")
-	b.streamingLink = data.Get("url").MustString()
-	b.Title = data.Get("title").MustString()
-	b.isLive = I2b(data.Get("liveStatus").MustInt())
+	b.streamingLink = infoJson.Get("data").Get("url").MustString("")
+	b.Title = infoJson.Get("data").Get("title").MustString("")
+	b.isLive = I2b(infoJson.Get("data").Get("liveStatus").MustInt(0))
 	//log.Printf("%+v", b)
 }
 

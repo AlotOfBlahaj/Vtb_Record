@@ -17,16 +17,13 @@ type Youtube struct {
 	Url string
 }
 
-func (y *Youtube) getVideoInfo() yfConfig {
+func (y *Youtube) getVideoInfo() {
 	htmlBody := HttpGet(y.Url)
 	re, _ := regexp.Compile(`ytplayer.config\s*=\s*([^\n]+?});`)
 	result := re.FindSubmatch(htmlBody)
 	if len(result) < 1 {
-		return yfConfig{
-			IsLive: false,
-			Title:  "",
-			Target: "",
-		}
+		y.IsLive = false
+		return
 	}
 	jsonYtConfig := result[1]
 	ytConfigJson, _ := simplejson.NewJson(jsonYtConfig)
@@ -40,7 +37,6 @@ func (y *Youtube) getVideoInfo() yfConfig {
 	y.Target = "https://www.youtube.com/watch?v=" + videoDetails.Get("videoId").MustString()
 	y.IsLive = IsLive
 	//log.Printf("%+v", y)
-	return y.yfConfig
 }
 func (y *Youtube) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
 	if !y.yfConfig.IsLive {
@@ -59,8 +55,8 @@ func (y *Youtube) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
 }
 func (y *Youtube) CheckLive(usersConfig UsersConfig) bool {
 	y.Url = "https://www.youtube.com/channel/" + usersConfig.TargetId + "/live"
-	yfConfig := y.getVideoInfo()
-	if !yfConfig.IsLive {
+	y.getVideoInfo()
+	if !y.IsLive {
 		NoLiving("Youtube", usersConfig.Name)
 	}
 	return y.yfConfig.IsLive
