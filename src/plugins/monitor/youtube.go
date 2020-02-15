@@ -33,8 +33,8 @@ func (y *Youtube) getVideoInfo() yfConfig {
 	playerResponse, _ := simplejson.NewJson([]byte(ytConfigJson.Get("args").Get("player_response").MustString()))
 	videoDetails := playerResponse.Get("videoDetails")
 	IsLive, err := videoDetails.Get("isLive").Bool()
-	if err == nil {
-		IsLive = true
+	if err != nil {
+		IsLive = false
 	}
 	y.Title = videoDetails.Get("title").MustString()
 	y.Target = "https://www.youtube.com/watch?v=" + videoDetails.Get("videoId").MustString()
@@ -43,6 +43,9 @@ func (y *Youtube) getVideoInfo() yfConfig {
 	return y.yfConfig
 }
 func (y *Youtube) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
+	if !y.yfConfig.IsLive {
+		return &structUtils.VideoInfo{}
+	}
 	v := &structUtils.VideoInfo{
 		Title:         y.Title,
 		Date:          GetTimeNow(),
