@@ -45,6 +45,7 @@ func initConfig() {
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("D:/")
 	viper.SetConfigType("json")
+	viper.WatchConfig()
 	err := viper.ReadInConfig()
 	if err != nil {
 		fmt.Printf("config file error: %s\n", err)

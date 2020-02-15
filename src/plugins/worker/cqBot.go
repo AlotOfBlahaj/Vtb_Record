@@ -36,7 +36,7 @@ func (c *CQMsg) CreateCQMsg(groupId int) {
 }
 func needCQBot(video *structUtils.VideoInfo) error {
 	if !video.UsersConfig.NeedCQBot {
-		return errors.New(video.UsersConfig.Name + "needn't download")
+		return errors.New(video.UsersConfig.Name + "needn't cq")
 	}
 	return nil
 }
