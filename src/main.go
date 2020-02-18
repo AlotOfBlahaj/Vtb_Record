@@ -7,8 +7,6 @@ import (
 	"log"
 )
 
-type ScheduleTask func(monitor monitor.VideoMonitor, userConfig UsersConfig)
-
 func arrangeTask() {
 	var ch chan int
 	for _, module := range Config.Module {

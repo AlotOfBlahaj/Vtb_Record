@@ -18,6 +18,7 @@ type ProcessVideo struct {
 }
 
 func (p *ProcessVideo) startDownloadVideo(ch chan string) {
+	p.videoPathList = VideoPathList{}
 	for {
 		aFilePath := worker.DownloadVideo(p.liveStatus.video)
 		time.Sleep(time.Millisecond * 100)
@@ -31,6 +32,9 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 				videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
 			} else {
 				videoName = ts2mp4(aFilePath, p.liveStatus.video.UsersConfig.DownloadDir, p.liveStatus.video.Title)
+			}
+			if videoName == "" {
+				return
 			}
 			ch <- videoName
 			break
@@ -49,9 +53,7 @@ func (p *ProcessVideo) StartProcessVideo() {
 	end := make(chan int)
 	go worker.CQBot(video)
 	if p.isNeedDownload() {
-
 		p.liveStatus.video.TransRecordPath = worker.StartRecord(video)
-
 		go p.startDownloadVideo(ch)
 		go p.distributeVideo(end, <-ch)
 	} else {
@@ -61,13 +63,12 @@ func (p *ProcessVideo) StartProcessVideo() {
 	worker.CloseRecord(video)
 }
 
-func (p *ProcessVideo) distributeVideo(end chan int, fileName string) string {
+func (p *ProcessVideo) distributeVideo(end chan int, fileName string) {
 	video := p.liveStatus.video
 	video.FileName = fileName
 	video.FilePath = video.UsersConfig.DownloadDir + "/" + video.FileName
 	worker.UploadVideo(video)
 	end <- 1
-	return video.FilePath
 }
 
 func (p *ProcessVideo) keepLiveAlive(end chan int) {
@@ -100,6 +101,10 @@ func (l VideoPathList) mergeVideo(Title string, downloadDir string) string {
 	mergedName := utils.ChangeName(Title + "_merged.mp4")
 	mergedPath := downloadDir + "/" + mergedName
 	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", "-f", "mp4", mergedPath)
+	if !utils.IsFileExist(mergedPath) {
+		log.Printf("mergeVideo: %s the video file don't exist", mergedPath)
+		return ""
+	}
 	for _, aPath := range l {
 		_ = os.Remove(aPath)
 	}
@@ -110,6 +115,10 @@ func ts2mp4(tsPath string, downloadDir string, title string) string {
 	mp4Name := utils.ChangeName(title + ".mp4")
 	mp4Path := downloadDir + "/" + mp4Name
 	utils.ExecShell("ffmpeg", "-i", tsPath, "-c", "copy", "-f", "mp4", mp4Path)
+	if !utils.IsFileExist(mp4Path) {
+		log.Printf("ts2mp4: %s the video file don't exist", mp4Path)
+		return ""
+	}
 	_ = os.Remove(tsPath)
 	return mp4Name
 }
