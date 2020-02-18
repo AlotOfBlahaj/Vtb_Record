@@ -39,7 +39,7 @@
 
 - 编辑config.json以设置功能
 
-```json
+```jsonc
 {
   "EnableProxy": false,  // 是否启用代理
   "Proxy": "127.0.0.1:10800",  //代理地址，应为socks5代理
@@ -105,7 +105,7 @@
 
 - Users检测对象配置详解
 
-```json
+```jsonc
 {
     "TargetId": "UCQ0UDLQCjY0rmuxCDE38FGg", // ①见下文
     "Name": "natsuiromatsuri", // 对象名称，用以设置下载目录以及和上传端交互
