@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/fzxiao233/Vtb_Record/src/plugins/structUtils"
+	"github.com/fzxiao233/Vtb_Record/plugins/structUtils"
 	"log"
 	"net/http"
 )

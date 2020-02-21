@@ -1,6 +1,6 @@
 package structUtils
 
-import "github.com/fzxiao233/Vtb_Record/src/utils"
+import "github.com/fzxiao233/Vtb_Record/utils"
 
 type VideoInfo struct {
 	Title           string

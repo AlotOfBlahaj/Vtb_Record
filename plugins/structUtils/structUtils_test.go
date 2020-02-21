@@ -1,7 +1,7 @@
 package structUtils
 
 import (
-	"Vtb_Record/src/utils"
+	"github.com/fzxiao233/Vtb_Record/utils"
 	"testing"
 )
 
