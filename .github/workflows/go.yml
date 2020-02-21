@@ -22,6 +22,14 @@ jobs:
       -
           name: Cp src
           run: mkdir -p /home/runner/go/src/github.com/fzxiao233 && cp -r /home/runner/work/Vtb_Record/Vtb_Record /home/runner/go/src/github.com/fzxiao233/
+      
+      - name: Get dependencies
+        run: |
+          go get -v -t -d ./...
+          if [ -f Gopkg.toml ]; then
+              curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+              dep ensure
+          fi
       -
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
