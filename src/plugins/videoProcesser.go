@@ -1,9 +1,9 @@
 package plugins
 
 import (
-	"Vtb_Record/src/plugins/monitor"
-	"Vtb_Record/src/plugins/worker"
-	"Vtb_Record/src/utils"
+	"github.com/fzxiao233/Vtb_Record/src/plugins/monitor"
+	"github.com/fzxiao233/Vtb_Record/src/plugins/worker"
+	"github.com/fzxiao233/Vtb_Record/src/utils"
 	"log"
 	"os"
 	"time"

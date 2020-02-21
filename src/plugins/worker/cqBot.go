@@ -1,10 +1,10 @@
 package worker
 
 import (
-	"Vtb_Record/src/plugins/structUtils"
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/fzxiao233/Vtb_Record/src/plugins/structUtils"
 	"log"
 	"net/http"
 )
