@@ -1,8 +1,8 @@
 package worker
 
 import (
-	"github.com/fzxiao233/Vtb_Record/src/plugins/structUtils"
-	"github.com/fzxiao233/Vtb_Record/src/utils"
+	"github.com/fzxiao233/Vtb_Record/plugins/structUtils"
+	"github.com/fzxiao233/Vtb_Record/utils"
 	"log"
 )
 

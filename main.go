@@ -1,9 +1,9 @@
 package main
 
 import (
-	. "github.com/fzxiao233/Vtb_Record/src/plugins"
-	"github.com/fzxiao233/Vtb_Record/src/plugins/monitor"
-	. "github.com/fzxiao233/Vtb_Record/src/utils"
+	. "github.com/fzxiao233/Vtb_Record/plugins"
+	"github.com/fzxiao233/Vtb_Record/plugins/monitor"
+	. "github.com/fzxiao233/Vtb_Record/utils"
 	"log"
 )
 

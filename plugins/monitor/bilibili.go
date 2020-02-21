@@ -2,8 +2,8 @@ package monitor
 
 import (
 	"github.com/bitly/go-simplejson"
-	"github.com/fzxiao233/Vtb_Record/src/plugins/structUtils"
-	. "github.com/fzxiao233/Vtb_Record/src/utils"
+	"github.com/fzxiao233/Vtb_Record/plugins/structUtils"
+	. "github.com/fzxiao233/Vtb_Record/utils"
 )
 
 type Bilibili struct {
