@@ -20,6 +20,9 @@ jobs:
         with:
           go-version: 1.13.x
       -
+          name: Cp src
+          run: cp /home/runner/work/Vtb_Record/Vtb_Record /home/runner/go/src/
+      -
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
