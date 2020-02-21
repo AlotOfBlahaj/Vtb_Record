@@ -21,7 +21,7 @@ jobs:
           go-version: 1.13.x
       -
           name: Cp src
-          run: cp -r /home/runner/work/Vtb_Record/Vtb_Record /home/runner/go/src/
+          run: mkdir /home/runner/go && mkdir /home/runner/go/src && cp -r /home/runner/work/Vtb_Record/Vtb_Record /home/runner/go/src/
       -
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
