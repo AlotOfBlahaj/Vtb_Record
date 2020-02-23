@@ -124,11 +124,11 @@
 
 均为粗体部分
 
-- Youtube, 如 www.youtube.com/channel/**UCp6993wxpyDPHUpavwDFqgg** 
+- Youtube, 如 www.youtube.com/channel/ **UCp6993wxpyDPHUpavwDFqgg** 
 
-- Twitcasting, 如 twitcasting.tv/**natsuiromatsuri**
+- Twitcasting, 如 twitcasting.tv/ **natsuiromatsuri**
 
-- Bilibili, 如 space.bilibili.com/**336731767**
+- Bilibili, 如 space.bilibili.com/ **336731767**
 
 ② QQ机器人的配置
 
@@ -142,7 +142,7 @@
 
 ③ TransBiliId设置
 
-- TransBiliID为该监控目标对应的Bilibili用户编号（粗体部分）https://space.bilibili.com/__336731767__
+- TransBiliID为该监控目标对应的Bilibili用户编号（粗体部分）space.bilibili.com/ **336731767**
 
 - 同传指在直播间发送的带有【】标记的内容，会保存为txt文本
 
