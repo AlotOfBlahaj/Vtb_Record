@@ -124,11 +124,11 @@
 
 均为粗体部分
 
-- Youtube, 如 https://www.youtube.com/channel/__UCp6993wxpyDPHUpavwDFqgg__ 
+- Youtube, 如 www.youtube.com/channel/**UCp6993wxpyDPHUpavwDFqgg** 
 
-- Twitcasting, 如 https://twitcasting.tv/__natsuiromatsuri__
+- Twitcasting, 如 twitcasting.tv/**natsuiromatsuri**
 
-- Bilibili, 如 https://space.bilibili.com/__336731767__
+- Bilibili, 如 space.bilibili.com/**336731767**
 
 ② QQ机器人的配置
 
