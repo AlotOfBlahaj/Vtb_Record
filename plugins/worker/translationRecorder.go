@@ -29,7 +29,7 @@ func StartRecord(video *structUtils.VideoInfo) string {
 	if video.UsersConfig.TransBiliId == "" {
 		return ""
 	}
-	filename := video.UsersConfig.TransBiliId + "_" + strconv.FormatInt(time.Now().Unix(), 10) + ".txt"
+	filename := video.UsersConfig.TransBiliId + "_" + strconv.FormatInt(time.Now().Unix(), 10) + ".srt"
 	aFilePath := utils.Config.DownloadDir + "/" + filename
 	go callJsApi(getRoomId(video.UsersConfig.TransBiliId), "1", filename)
 	return aFilePath
