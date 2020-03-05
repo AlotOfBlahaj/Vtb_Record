@@ -4,17 +4,18 @@ before:
   hooks:
     - go mod download
 builds:
-  - env:
-      - CGO_ENABLED=0
-  - goos:
-      - darwin
-      - windows
-      - linux
-  - goarch:
-      - amd64
-      - arm64
-  - goarm:
-      - 7
+  - main:
+      env:
+        - CGO_ENABLED=0
+      goos:
+        - darwin
+        - windows
+        - linux
+      goarch:
+        - amd64
+        - arm64
+      goarm:
+        - 7
 archives:
   - replacements:
       darwin: Macos
