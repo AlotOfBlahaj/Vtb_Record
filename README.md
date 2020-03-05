@@ -33,7 +33,9 @@
 
 ## 使用方式
 
-一、 配置config.json文件
+一、 在[Release](https://github.com/fzxiao233/Vtb_Record/releases)下载对应平台已编译好的二进制文件
+
+二、 配置config.json文件
 
 - 拷贝config_example.json并改名config.json
 

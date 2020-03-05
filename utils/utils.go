@@ -33,10 +33,17 @@ func HttpGet(url string) []byte {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101 Firefox/60.0")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.8")
-	res, err := client.Do(req)
-	if err != nil {
-		log.Printf("http request error %v", err)
-		return []byte{}
+	i := 0
+	res := &http.Response{}
+	var err error
+	for i < 3 {
+		res, err = client.Do(req)
+		if err != nil {
+			log.Printf("http request error %v", err)
+			i++
+		} else {
+			break
+		}
 	}
 	htmlBody, _ := ioutil.ReadAll(res.Body)
 	res.Body.Close()
