@@ -28,10 +28,12 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 		p.videoPathList = append(p.videoPathList, aFilePath)
 		if p.isNewLive() {
 			videoName := p.liveStatus.video.Title + ".ts"
-			if len(p.videoPathList) > 1 {
-				videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
-			} else {
-				videoName = ts2mp4(aFilePath, p.liveStatus.video.UsersConfig.DownloadDir, p.liveStatus.video.Title)
+			if utils.Config.EnableTS2MP4 {
+				if len(p.videoPathList) > 1 {
+					videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
+				} else {
+					videoName = ts2mp4(aFilePath, p.liveStatus.video.UsersConfig.DownloadDir, p.liveStatus.video.Title)
+				}
 			}
 			if videoName == "" {
 				return

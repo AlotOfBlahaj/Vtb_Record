@@ -34,6 +34,7 @@ type MainConfig struct {
 	Module          []ModuleConfig
 	RedisHost       string
 	ExpressPort     string
+	EnableTS2MP4    bool
 }
 
 func init() {
