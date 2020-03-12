@@ -14,11 +14,11 @@ type Bilibili struct {
 }
 
 func (b *Bilibili) getVideoInfo() error {
-	rawInfoJson, err := HttpGet("https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid="+b.TargetId, map[string]string{})
+	rawInfoJSON, err := HttpGet("https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid="+b.TargetId, map[string]string{})
 	if err != nil {
 		return err
 	}
-	infoJson, _ := simplejson.NewJson(rawInfoJson)
+	infoJson, _ := simplejson.NewJson(rawInfoJSON)
 	b.streamingLink = infoJson.Get("data").Get("url").MustString("")
 	b.Title = infoJson.Get("data").Get("title").MustString("")
 	b.isLive = I2b(infoJson.Get("data").Get("liveStatus").MustInt(0))

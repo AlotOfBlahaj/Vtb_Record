@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-func callJsApi(roomId string, status string, filename string) error {
-	_, err := utils.HttpGet("http://127.0.0.1:"+utils.Config.ExpressPort+"/api/live?roomId="+roomId+"&status="+status+"&filename="+filename, map[string]string{})
+func callJsAPI(roomID string, status string, filename string) error {
+	_, err := utils.HttpGet("http://127.0.0.1:"+utils.Config.ExpressPort+"/api/live?roomID="+roomID+"&status="+status+"&filename="+filename, map[string]string{})
 	if err != nil {
 		err = fmt.Errorf("call danmaku error %v", err)
 		log.Print(err)
 		return err
 	}
-	log.Printf("[Danmaku]%s: %s", roomId, status)
+	log.Printf("[Danmaku]%s: %s", roomID, status)
 	return nil
 }
 
@@ -48,7 +48,7 @@ func StartRecord(video *structUtils.VideoInfo) string {
 	}
 	filename := video.UsersConfig.TransBiliId + "_" + strconv.FormatInt(time.Now().Unix(), 10) + ".txt"
 	aFilePath := utils.Config.DownloadDir + "/" + filename
-	err := callJsApi(getRoomId(video.UsersConfig.TransBiliId), "1", filename)
+	err := callJsAPI(getRoomId(video.UsersConfig.TransBiliId), "1", filename)
 	if err != nil {
 		return ""
 	}
@@ -59,7 +59,7 @@ func CloseRecord(video *structUtils.VideoInfo) {
 	if video.UsersConfig.TransBiliId == "" {
 		return
 	}
-	err := callJsApi(getRoomId(video.UsersConfig.TransBiliId), "0", "")
+	err := callJsAPI(getRoomId(video.UsersConfig.TransBiliId), "0", "")
 	if err != nil {
 		return
 	}

@@ -18,11 +18,11 @@ type twitcastingVideoInfo struct {
 }
 
 func (t *Twitcasting) getVideoInfo() error {
-	rawInfoJson, err := HttpGet("https://twitcasting.tv/streamserver.php?target="+t.TargetId+"&mode=client", map[string]string{})
+	rawInfoJSON, err := HttpGet("https://twitcasting.tv/streamserver.php?target="+t.TargetId+"&mode=client", map[string]string{})
 	if err != nil {
 		return err
 	}
-	infoJson, _ := simplejson.NewJson(rawInfoJson)
+	infoJson, _ := simplejson.NewJson(rawInfoJSON)
 	t.StreamingLink = "https://twitcasting.tv/" + t.TargetId
 	t.IsLive = infoJson.Get("movie").Get("live").MustBool()
 	t.Vid = strconv.Itoa(infoJson.Get("movie").Get("id").MustInt())
