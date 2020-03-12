@@ -43,7 +43,6 @@ func init() {
 func initConfig() {
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("D:/")
 	viper.SetConfigType("json")
 	viper.WatchConfig()
 	err := viper.ReadInConfig()

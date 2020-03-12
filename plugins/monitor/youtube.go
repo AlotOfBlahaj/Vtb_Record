@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"fmt"
 	"github.com/bitly/go-simplejson"
 	"github.com/fzxiao233/Vtb_Record/plugins/structUtils"
 	. "github.com/fzxiao233/Vtb_Record/utils"
@@ -17,13 +18,16 @@ type Youtube struct {
 	Url string
 }
 
-func (y *Youtube) getVideoInfo() {
-	htmlBody := HttpGet(y.Url)
+func (y *Youtube) getVideoInfo() error {
+	htmlBody, err := HttpGet(y.Url, map[string]string{})
+	if err != nil {
+		return err
+	}
 	re, _ := regexp.Compile(`ytplayer.config\s*=\s*([^\n]+?});`)
 	result := re.FindSubmatch(htmlBody)
 	if len(result) < 1 {
 		y.IsLive = false
-		return
+		return fmt.Errorf("youtube cannot find js_data")
 	}
 	jsonYtConfig := result[1]
 	ytConfigJson, _ := simplejson.NewJson(jsonYtConfig)
@@ -36,6 +40,7 @@ func (y *Youtube) getVideoInfo() {
 	y.Title = videoDetails.Get("title").MustString()
 	y.Target = "https://www.youtube.com/watch?v=" + videoDetails.Get("videoId").MustString()
 	y.IsLive = IsLive
+	return nil
 	//log.Printf("%+v", y)
 }
 func (y *Youtube) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
@@ -55,7 +60,10 @@ func (y *Youtube) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
 }
 func (y *Youtube) CheckLive(usersConfig UsersConfig) bool {
 	y.Url = "https://www.youtube.com/channel/" + usersConfig.TargetId + "/live"
-	y.getVideoInfo()
+	err := y.getVideoInfo()
+	if err != nil {
+		y.IsLive = false
+	}
 	if !y.IsLive {
 		NoLiving("Youtube", usersConfig.Name)
 	}
