@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/fzxiao233/Go-Emoji-Utils"
 	"io/ioutil"
 	"log"
@@ -29,25 +30,29 @@ func createClient() *http.Client {
 	return client
 }
 
-func HttpGet(url string) []byte {
+func HttpGet(url string, header map[string]string) ([]byte, error) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101 Firefox/60.0")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.8")
-	i := 0
-	res := &http.Response{}
-	var err error
-	for i < 3 {
-		res, err = client.Do(req)
-		if err != nil {
-			log.Printf("http request error %v", err)
-			i++
-		} else {
-			break
-		}
+	for k, v := range header {
+		req.Header.Set(k, v)
+	}
+	res, err := client.Do(req)
+	if res != nil {
+		defer func() {
+			err := res.Body.Close()
+			if err != nil {
+				return
+			}
+		}()
+	}
+	if err != nil {
+		err = fmt.Errorf("HttpGet error %w", err)
+		log.Print(err)
+		return []byte{}, err
 	}
 	htmlBody, _ := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-	return htmlBody
+	return htmlBody, nil
 }
 func createSOCKS5Proxy() *http.Client {
 	proxyUrl, _ := url.Parse("socks5://" + Config.Proxy)

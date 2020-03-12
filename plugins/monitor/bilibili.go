@@ -13,12 +13,16 @@ type Bilibili struct {
 	streamingLink string
 }
 
-func (b *Bilibili) getVideoInfo() {
-	rawInfoJson := HttpGet("https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid=" + b.TargetId)
-	infoJson, _ := simplejson.NewJson(rawInfoJson)
+func (b *Bilibili) getVideoInfo() error {
+	rawInfoJSON, err := HttpGet("https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid="+b.TargetId, map[string]string{})
+	if err != nil {
+		return err
+	}
+	infoJson, _ := simplejson.NewJson(rawInfoJSON)
 	b.streamingLink = infoJson.Get("data").Get("url").MustString("")
 	b.Title = infoJson.Get("data").Get("title").MustString("")
 	b.isLive = I2b(infoJson.Get("data").Get("liveStatus").MustInt(0))
+	return nil
 	//log.Printf("%+v", b)
 }
 
@@ -37,7 +41,10 @@ func (b *Bilibili) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
 
 func (b *Bilibili) CheckLive(usersConfig UsersConfig) bool {
 	b.TargetId = usersConfig.TargetId
-	b.getVideoInfo()
+	err := b.getVideoInfo()
+	if err != nil {
+		b.isLive = false
+	}
 	if !b.isLive {
 		NoLiving("Bilibili", usersConfig.Name)
 	}
