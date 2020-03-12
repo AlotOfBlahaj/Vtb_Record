@@ -6,6 +6,7 @@
   "ExpressPort": 3000,
   "DownloadQuality": "best",
   "DownloadDir": "",
+  "EnableTS2MP4": true,
   "Module": [
     {
       "Name": "Youtube",
@@ -31,16 +32,6 @@
       ]
     },
     {
-      "Name": "Mirrativ",
-      "Enable": false,
-      "Users": [
-        {
-          "TargetId": "3264432",
-          "Name": "natsuiromatsuri"
-        }
-      ]
-    },
-    {
       "Name": "Bilibili",
       "Enable": true,
       "Users": [
@@ -48,18 +39,6 @@
           "TargetId": "336731767",
           "Name": "natsuiromatsuri",
           "NeedDownload": true
-        }
-      ]
-    },
-    {
-      "Name": "BilibiliArticle",
-      "Enable": false,
-      "Users": [
-        {
-          "TargetId": "420711844"
-        },
-        {
-          "TargetId": "418124907"
         }
       ]
     }
