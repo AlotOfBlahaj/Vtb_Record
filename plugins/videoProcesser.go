@@ -22,10 +22,9 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 	for {
 		aFilePath := worker.DownloadVideo(p.liveStatus.video)
 		time.Sleep(time.Millisecond * 100)
-		if aFilePath == "" {
-			continue
+		if aFilePath != "" {
+			p.videoPathList = append(p.videoPathList, aFilePath)
 		}
-		p.videoPathList = append(p.videoPathList, aFilePath)
 		if p.isNewLive() {
 			videoName := p.liveStatus.video.Title + ".ts"
 			if utils.Config.EnableTS2MP4 {
