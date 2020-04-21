@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"github.com/fzxiao233/Go-Emoji-Utils"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,9 +15,15 @@ import (
 )
 
 var client *http.Client
+var skipData []string
 
 func init() {
 	client = createClient()
+
+	f, _ := ioutil.ReadFile("SkipData.txt")
+	for _, i := range string(f) {
+		skipData = append(skipData, string(i))
+	}
 }
 
 func createClient() *http.Client {
@@ -104,10 +109,8 @@ func GetTimeNow() string {
 	return time.Now().Format("2006-01-02 15:04:05")
 }
 func RemoveIllegalChar(Title string) string {
-	illegalChars := []string{"|", "/", "\\", ":", "?"}
-	Title = emoji.RemoveAll(Title)
-	for _, char := range illegalChars {
-		Title = strings.ReplaceAll(Title, char, "#")
+	for _, s := range skipData {
+		Title = strings.Replace(Title, s, "", -1)
 	}
 	return Title
 }
