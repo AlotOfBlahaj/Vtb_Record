@@ -35,7 +35,9 @@
 
 一、 在[Release](https://github.com/fzxiao233/Vtb_Record/releases)下载对应平台已编译好的二进制文件
 
-二、 配置config.json文件
+二、 安装依赖streamlink方法见[文档](https://streamlink.github.io/install.html)
+
+三、 配置config.json文件
 
 - 拷贝config_example.json并改名config.json
 
@@ -151,7 +153,7 @@
 
 - 使用本功能需配置后端[bilibili-danmaku-translation-recorder](https://github.com/fzxiao233/bilibili-danmaku-translation-recorder) 
 
-二、启用本程序
+四、启用本程序
 
 在命令行下执行即可
 
