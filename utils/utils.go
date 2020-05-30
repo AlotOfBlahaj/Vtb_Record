@@ -44,12 +44,7 @@ func HttpGet(url string, header map[string]string) ([]byte, error) {
 	}
 	res, err := client.Do(req)
 	if res != nil {
-		defer func() {
-			err := res.Body.Close()
-			if err != nil {
-				return
-			}
-		}()
+		defer res.Body.Close()
 	}
 	if err != nil {
 		err = fmt.Errorf("HttpGet error %w", err)

@@ -15,31 +15,35 @@ type ProcessVideo struct {
 	videoPathList VideoPathList
 	liveTrace     LiveTrace
 	monitor       monitor.VideoMonitor
+	isLive        bool
+	end           chan int
 }
 
 func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 	p.videoPathList = VideoPathList{}
 	for {
 		aFilePath := worker.DownloadVideo(p.liveStatus.video)
-		time.Sleep(time.Millisecond * 100)
 		if aFilePath != "" {
 			p.videoPathList = append(p.videoPathList, aFilePath)
 		}
-		videoName := p.liveStatus.video.Title + ".ts"
-		if utils.Config.EnableTS2MP4 {
-			if len(p.videoPathList) > 1 {
-				videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
-			} else {
-				videoName = ts2mp4(aFilePath, p.liveStatus.video.UsersConfig.DownloadDir, p.liveStatus.video.Title)
-			}
+		time.Sleep(time.Millisecond * 100)
+		if !p.isLive {
+			break
 		}
-		if videoName == "" {
-			return
-		}
-		ch <- videoName
-		break
-
 	}
+	var videoName string
+	if utils.Config.EnableTS2MP4 {
+		if len(p.videoPathList) > 1 {
+			videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
+		} else {
+			videoName = ts2mp4(p.videoPathList[0], p.liveStatus.video.UsersConfig.DownloadDir, p.liveStatus.video.Title)
+		}
+	}
+	if videoName == "" {
+		p.end <- 1
+		return
+	}
+	ch <- videoName
 }
 
 func (p *ProcessVideo) isNeedDownload() bool {
@@ -48,34 +52,38 @@ func (p *ProcessVideo) isNeedDownload() bool {
 
 func (p *ProcessVideo) StartProcessVideo() {
 	log.Printf("%s|%s|%s is living. start to process", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
+	p.isLive = true //  默认在直播中
 	ch := make(chan string)
 	video := p.liveStatus.video
-	end := make(chan int)
+	p.end = make(chan int)
 	go worker.CQBot(video)
+	go p.keepLiveAlive()
 	if p.isNeedDownload() {
 		p.liveStatus.video.TransRecordPath = worker.StartRecord(video)
 		go p.startDownloadVideo(ch)
-		go p.distributeVideo(end, <-ch)
-	} else {
-		go p.keepLiveAlive(end)
+		go p.distributeVideo(<-ch)
 	}
-	<-end
+	<-p.end
 	worker.CloseRecord(video)
 }
 
-func (p *ProcessVideo) distributeVideo(end chan int, fileName string) {
+func (p *ProcessVideo) distributeVideo(fileName string) {
 	video := p.liveStatus.video
 	video.FileName = fileName
 	video.FilePath = video.UsersConfig.DownloadDir + "/" + video.FileName
 	worker.UploadVideo(video)
-	end <- 1
+	p.end <- 1
 }
 
-func (p *ProcessVideo) keepLiveAlive(end chan int) {
+func (p *ProcessVideo) keepLiveAlive() {
 	ticker := time.NewTicker(time.Second * 30)
 	for {
 		if p.isNewLive() {
-			end <- 1
+			p.isLive = false
+			if p.isNeedDownload() {
+				return //  需要下载时不由此控制end
+			}
+			p.end <- 1
 			return
 		}
 		<-ticker.C
@@ -85,10 +93,10 @@ func (p *ProcessVideo) keepLiveAlive(end chan int) {
 func (p *ProcessVideo) isNewLive() bool {
 	newLiveStatus := p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig)
 	if newLiveStatus.isLive == false || (p.liveStatus.isLive == true && p.liveStatus.video.Title != newLiveStatus.video.Title || p.liveStatus.video.StreamingLink != newLiveStatus.video.StreamingLink) {
-		log.Printf("%s|%s|%s is new live or offline", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
+		log.Printf("[isNewLive]%s|%s|%s is new live or offline", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
 		return true
 	} else {
-		log.Printf("%s|%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
+		log.Printf("[isNewLive]%s|%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
 		return false
 	}
 }

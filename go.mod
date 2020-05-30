@@ -9,4 +9,6 @@ require (
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/onsi/gomega v1.9.0 // indirect
 	github.com/spf13/viper v1.6.2
+	github.com/tidwall/gjson v1.6.0 // indirect
+	github.com/tidwall/pretty v1.0.1 // indirect
 )
