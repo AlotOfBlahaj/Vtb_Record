@@ -3,10 +3,10 @@ package utils
 import (
 	"fmt"
 	"github.com/fzxiao233/Go-Emoji-Utils"
+	"github.com/mitchellh/mapstructure"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,22 +15,30 @@ import (
 	"time"
 )
 
-var client *http.Client
+//var client *http.Client
 
 func init() {
-	client = createClient()
+	//client = createClient()
 }
 
-func createClient() *http.Client {
-	if Config.EnableProxy == true {
-		client = createSOCKS5Proxy()
-	} else {
+func MapToStruct(mapVal map[string]interface{}, structVal interface{}) error {
+	config := &mapstructure.DecoderConfig{
+		Metadata:         nil,
+		Result:           structVal,
+		WeaklyTypedInput: true,
+	}
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return err
+	}
+	decoder.Decode(mapVal)
+	return nil
+}
+
+func HttpGet(client *http.Client, url string, header map[string]string) ([]byte, error) {
+	if client == nil {
 		client = http.DefaultClient
 	}
-	return client
-}
-
-func HttpGet(url string, header map[string]string) ([]byte, error) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101 Firefox/60.0")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.8")
@@ -49,19 +57,7 @@ func HttpGet(url string, header map[string]string) ([]byte, error) {
 	htmlBody, _ := ioutil.ReadAll(res.Body)
 	return htmlBody, nil
 }
-func createSOCKS5Proxy() *http.Client {
-	proxyUrl, _ := url.Parse("socks5://" + Config.Proxy)
-	transport := &http.Transport{
-		Proxy: http.ProxyURL(proxyUrl),
-	}
 
-	//adding the Transport object to the http Client
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   60 * time.Second,
-	}
-	return client
-}
 func IsFileExist(aFilepath string) bool {
 	if _, err := os.Stat(aFilepath); err == nil {
 		return true

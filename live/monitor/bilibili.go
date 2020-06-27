@@ -2,11 +2,13 @@ package monitor
 
 import (
 	"github.com/bitly/go-simplejson"
-	"github.com/fzxiao233/Vtb_Record/plugins/structUtils"
+	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	. "github.com/fzxiao233/Vtb_Record/utils"
+	"log"
 )
 
 type Bilibili struct {
+	BaseMonitor
 	TargetId      string
 	Title         string
 	isLive        bool
@@ -14,7 +16,14 @@ type Bilibili struct {
 }
 
 func (b *Bilibili) getVideoInfo() error {
-	rawInfoJSON, err := HttpGet("https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid="+b.TargetId, map[string]string{})
+	_url, ok := b.ctx.ExtraModConfig["ApiHostUrl"]
+	var url string
+	if ok {
+		url = _url.(string)
+	} else {
+		url = "https://api.live.bilibili.com"
+	}
+	rawInfoJSON, err := b.ctx.HttpGet(url+"/room/v1/Room/getRoomInfoOld?mid="+b.TargetId, map[string]string{})
 	if err != nil {
 		return err
 	}
@@ -26,8 +35,8 @@ func (b *Bilibili) getVideoInfo() error {
 	//log.Printf("%+v", b)
 }
 
-func (b *Bilibili) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
-	v := &structUtils.VideoInfo{
+func (b *Bilibili) CreateVideo(usersConfig UsersConfig) *interfaces.VideoInfo {
+	v := &interfaces.VideoInfo{
 		Title:         b.Title,
 		Date:          GetTimeNow(),
 		Target:        b.streamingLink,
@@ -35,7 +44,6 @@ func (b *Bilibili) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
 		StreamingLink: b.streamingLink,
 		UsersConfig:   usersConfig,
 	}
-	v.CreateNoticeMsg()
 	return v
 }
 
@@ -44,6 +52,7 @@ func (b *Bilibili) CheckLive(usersConfig UsersConfig) bool {
 	err := b.getVideoInfo()
 	if err != nil {
 		b.isLive = false
+		log.Print(err)
 	}
 	if !b.isLive {
 		NoLiving("Bilibili", usersConfig.Name)

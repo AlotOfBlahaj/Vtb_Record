@@ -3,11 +3,12 @@ package monitor
 import "github.com/fzxiao233/Vtb_Record/utils"
 
 type Twitch struct {
+	ctx    MonitorCtx
 	APIUrl string
 }
 
 func (t Twitch) getLiveStatus() error {
-	_, err := utils.HttpGet(t.APIUrl, map[string]string{})
+	_, err := t.ctx.HttpGet(t.APIUrl, map[string]string{})
 	if err != nil {
 		return err
 	}

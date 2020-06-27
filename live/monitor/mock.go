@@ -1,18 +1,18 @@
 package monitor
 
 import (
-	"github.com/fzxiao233/Vtb_Record/plugins/structUtils"
+	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/utils"
 )
 
 type Mock struct {
-	Video  *structUtils.VideoInfo
+	Video  *interfaces.VideoInfo
 	IsLive bool
 }
 
 func (m *Mock) CheckLive(usersConfig utils.UsersConfig) bool {
 	return m.IsLive
 }
-func (m *Mock) CreateVideo(usersConfig utils.UsersConfig) *structUtils.VideoInfo {
+func (m *Mock) CreateVideo(usersConfig utils.UsersConfig) *interfaces.VideoInfo {
 	return m.Video
 }

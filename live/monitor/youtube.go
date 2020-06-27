@@ -3,7 +3,7 @@ package monitor
 import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
-	"github.com/fzxiao233/Vtb_Record/plugins/structUtils"
+	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	"regexp"
 )
@@ -14,12 +14,13 @@ type yfConfig struct {
 	Target string
 }
 type Youtube struct {
+	BaseMonitor
 	yfConfig
 	Url string
 }
 
 func (y *Youtube) getVideoInfo() error {
-	htmlBody, err := HttpGet(y.Url, map[string]string{})
+	htmlBody, err := y.ctx.HttpGet(y.Url, map[string]string{})
 	if err != nil {
 		return err
 	}
@@ -43,11 +44,11 @@ func (y *Youtube) getVideoInfo() error {
 	return nil
 	//log.Printf("%+v", y)
 }
-func (y *Youtube) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
+func (y *Youtube) CreateVideo(usersConfig UsersConfig) *interfaces.VideoInfo {
 	if !y.yfConfig.IsLive {
-		return &structUtils.VideoInfo{}
+		return &interfaces.VideoInfo{}
 	}
-	v := &structUtils.VideoInfo{
+	v := &interfaces.VideoInfo{
 		Title:         y.Title,
 		Date:          GetTimeNow(),
 		Target:        y.Target,
@@ -55,7 +56,6 @@ func (y *Youtube) CreateVideo(usersConfig UsersConfig) *structUtils.VideoInfo {
 		StreamingLink: "",
 		UsersConfig:   usersConfig,
 	}
-	v.CreateLiveMsg()
 	return v
 }
 func (y *Youtube) CheckLive(usersConfig UsersConfig) bool {

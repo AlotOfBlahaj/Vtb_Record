@@ -1,8 +1,8 @@
-package plugins
+package videoworker
 
 import (
-	"github.com/fzxiao233/Vtb_Record/plugins/monitor"
-	"github.com/fzxiao233/Vtb_Record/plugins/worker"
+	"github.com/fzxiao233/Vtb_Record/live/interfaces"
+	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	"github.com/fzxiao233/Vtb_Record/utils"
 	"log"
 	"os"
@@ -11,10 +11,11 @@ import (
 
 type VideoPathList []string
 type ProcessVideo struct {
-	liveStatus    *LiveStatus
+	LiveStatus    *interfaces.LiveStatus
 	videoPathList VideoPathList
-	liveTrace     LiveTrace
-	monitor       monitor.VideoMonitor
+	LiveTrace     monitor.LiveTrace
+	Monitor       monitor.VideoMonitor
+	Plugins       PluginManager
 	isLive        bool
 	end           chan int
 }
@@ -22,7 +23,9 @@ type ProcessVideo struct {
 func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 	p.videoPathList = VideoPathList{}
 	for {
-		aFilePath := worker.DownloadVideo(p.liveStatus.video)
+		ctx := p.Monitor.GetCtx()
+		proxy, _ := ctx.GetProxy()
+		aFilePath := DownloadVideo(p.LiveStatus.Video, proxy)
 		if aFilePath != "" {
 			p.videoPathList = append(p.videoPathList, aFilePath)
 		}
@@ -34,9 +37,9 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 	var videoName string
 	if utils.Config.EnableTS2MP4 {
 		if len(p.videoPathList) > 1 {
-			videoName = p.videoPathList.mergeVideo(p.liveStatus.video.Title, p.liveStatus.video.UsersConfig.DownloadDir)
+			videoName = p.videoPathList.mergeVideo(p.LiveStatus.Video.Title, p.LiveStatus.Video.UsersConfig.DownloadDir)
 		} else {
-			videoName = ts2mp4(p.videoPathList[0], p.liveStatus.video.UsersConfig.DownloadDir, p.liveStatus.video.Title)
+			videoName = ts2mp4(p.videoPathList[0], p.LiveStatus.Video.UsersConfig.DownloadDir, p.LiveStatus.Video.Title)
 		}
 	}
 	if videoName == "" {
@@ -47,36 +50,36 @@ func (p *ProcessVideo) startDownloadVideo(ch chan string) {
 }
 
 func (p *ProcessVideo) isNeedDownload() bool {
-	return p.liveStatus.video.UsersConfig.NeedDownload
+	return p.LiveStatus.Video.UsersConfig.NeedDownload
 }
 
 func (p *ProcessVideo) StartProcessVideo() {
-	log.Printf("%s|%s|%s is living. start to process", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
+	log.Printf("%s|%s|%s is living. start to process", p.LiveStatus.Video.Provider, p.LiveStatus.Video.UsersConfig.Name, p.LiveStatus.Video.Title)
 	p.isLive = true //  默认在直播中
 	ch := make(chan string)
-	video := p.liveStatus.video
 	p.end = make(chan int)
-	go worker.CQBot(video)
+	// plugin liveStart
+	go p.Plugins.OnLiveStart(p)
 	go p.keepLiveAlive()
 	if p.isNeedDownload() {
-		p.liveStatus.video.TransRecordPath = worker.StartRecord(video)
+		go p.Plugins.OnDownloadStart(p)
 		go p.startDownloadVideo(ch)
 		go p.distributeVideo(<-ch)
 	}
 	<-p.end
-	worker.CloseRecord(video)
+	p.Plugins.OnLiveEnd(p)
 }
 
 func (p *ProcessVideo) distributeVideo(fileName string) {
-	video := p.liveStatus.video
+	video := p.LiveStatus.Video
 	video.FileName = fileName
 	video.FilePath = video.UsersConfig.DownloadDir + "/" + video.FileName
-	worker.UploadVideo(video)
+	p.Plugins.OnLiveEnd(p)
 	p.end <- 1
 }
 
 func (p *ProcessVideo) keepLiveAlive() {
-	ticker := time.NewTicker(time.Second * 30)
+	ticker := time.NewTicker(time.Second * time.Duration(utils.Config.CheckSec))
 	for {
 		if p.isNewLive() {
 			p.isLive = false
@@ -91,12 +94,12 @@ func (p *ProcessVideo) keepLiveAlive() {
 }
 
 func (p *ProcessVideo) isNewLive() bool {
-	newLiveStatus := p.liveTrace(p.monitor, p.liveStatus.video.UsersConfig)
-	if newLiveStatus.isLive == false || (p.liveStatus.isLive == true && p.liveStatus.video.Title != newLiveStatus.video.Title || p.liveStatus.video.StreamingLink != newLiveStatus.video.StreamingLink) {
-		log.Printf("[isNewLive]%s|%s|%s is new live or offline", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
+	newLiveStatus := p.LiveTrace(p.Monitor, p.LiveStatus.Video.UsersConfig)
+	if newLiveStatus.IsLive == false || (p.LiveStatus.IsLive == true && p.LiveStatus.Video.Title != newLiveStatus.Video.Title || p.LiveStatus.Video.StreamingLink != newLiveStatus.Video.StreamingLink) {
+		log.Printf("[isNewLive]%s|%s|%s is new live or offline", p.LiveStatus.Video.Provider, p.LiveStatus.Video.UsersConfig.Name, p.LiveStatus.Video.Title)
 		return true
 	} else {
-		log.Printf("[isNewLive]%s|%s|%s KeepAlive", p.liveStatus.video.Provider, p.liveStatus.video.UsersConfig.Name, p.liveStatus.video.Title)
+		log.Printf("[isNewLive]%s|%s|%s KeepAlive", p.LiveStatus.Video.Provider, p.LiveStatus.Video.UsersConfig.Name, p.LiveStatus.Video.Title)
 		return false
 	}
 }

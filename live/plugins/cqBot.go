@@ -1,0 +1,87 @@
+package plugins
+
+import (
+	"bytes"
+	"encoding/json"
+	"github.com/fzxiao233/Vtb_Record/live/interfaces"
+	"github.com/fzxiao233/Vtb_Record/live/videoworker"
+	"github.com/fzxiao233/Vtb_Record/utils"
+	"log"
+	"net/http"
+)
+
+type CQConfig struct {
+	CQHost  string
+	CQToken string
+}
+type CQMsg struct {
+	GroupId int    `json:"group_id"`
+	Message string `json:"message"`
+}
+
+func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
+	client := &http.Client{}
+	JsonMsg, _ := json.Marshal(msg)
+	req, _ := http.NewRequest("POST", "http://"+cc.CQHost+"/send_group_msg", bytes.NewBuffer(JsonMsg))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+cc.CQToken)
+	_, err := client.Do(req)
+	if err != nil {
+		log.Print("CQbot error")
+	} else {
+		log.Printf("%s", msg.Message)
+	}
+}
+
+type PluginCQBot struct {
+}
+
+func CreateLiveMsg(v *interfaces.VideoInfo) string {
+	return "[直播提示]" + "[" + v.Provider + "]" + v.Title + "正在直播" + "链接: " + v.Target + " [CQ:at,qq=all]"
+}
+
+type CQJsonConfig struct {
+	NeedCQBot bool
+	QQGroupID []int
+	CQHost    string
+	CQToken   string
+}
+
+func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
+	video := process.LiveStatus.Video
+	config := CQJsonConfig{}
+	cqConfig, ok := video.UsersConfig.ExtraConfig["CQConfig"]
+	if !ok {
+		return nil
+	}
+	err := utils.MapToStruct(cqConfig.(map[string]interface{}), &config)
+	if err != nil {
+		return err
+	}
+
+	if !config.NeedCQBot {
+		log.Print(video.UsersConfig.Name + " needn't cq")
+		return nil
+	}
+
+	msg := CreateLiveMsg(video)
+	c := &CQMsg{Message: msg}
+	cc := &CQConfig{
+		CQHost:  config.CQHost,
+		CQToken: config.CQToken,
+	}
+	for _, GroupId := range config.QQGroupID {
+		c.GroupId = GroupId
+		cc.sendGroupMsg(c)
+		log.Printf("%s|%s send notice to %d", video.Provider, video.UsersConfig.Name, GroupId)
+	}
+	return nil
+}
+
+func (p *PluginCQBot) DownloadStart(process *videoworker.ProcessVideo) error {
+	return nil
+}
+
+func (p *PluginCQBot) LiveEnd(process *videoworker.ProcessVideo) error {
+	return nil
+}

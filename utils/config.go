@@ -2,8 +2,11 @@ package utils
 
 import (
 	"fmt"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"os"
+	"reflect"
+	"strings"
 )
 
 var Config *MainConfig
@@ -13,21 +16,19 @@ type UsersConfig struct {
 	Name         string
 	DownloadDir  string
 	NeedDownload bool
-	NeedCQBot    bool
-	QQGroupID    []int
-	CQHost       string
-	CQToken      string
 	TransBiliId  string
+	ExtraConfig  map[string]interface{}
 }
 type ModuleConfig struct {
-	Name       string
-	Enable     bool
-	EnableTemp bool
-	Users      []UsersConfig
+	//EnableProxy     bool
+	//Proxy           string
+	Name        string
+	Enable      bool
+	EnableTemp  bool
+	Users       []UsersConfig
+	ExtraConfig map[string]interface{}
 }
 type MainConfig struct {
-	EnableProxy     bool
-	Proxy           string
 	CheckSec        int
 	DownloadQuality string
 	DownloadDir     string
@@ -35,6 +36,7 @@ type MainConfig struct {
 	RedisHost       string
 	ExpressPort     string
 	EnableTS2MP4    bool
+	ExtraConfig     map[string]interface{}
 }
 
 func init() {
@@ -54,9 +56,36 @@ func initConfig() {
 		os.Exit(1)
 	}
 	Config = &MainConfig{}
-	err = viper.Unmarshal(Config)
+	mdMap := make(map[string]*mapstructure.Metadata, 10)
+	mdMap[""] = &mapstructure.Metadata{}
+	err = viper.Unmarshal(Config, func(c *mapstructure.DecoderConfig) {
+		c.DecodeHook = mapstructure.ComposeDecodeHookFunc(
+			func(inType reflect.Type, outType reflect.Type, input interface{}) (interface{}, error) {
+				if inType.Kind() == reflect.Map && outType.Kind() == reflect.Struct { // we'll decoding a struct
+					fieldsMap := make(map[string]reflect.StructField, 10)
+					for i := 0; i < outType.NumField(); i++ {
+						fieldsMap[strings.ToLower(outType.Field(i).Name)] = outType.Field(i)
+					}
+					inputMap := input.(map[string]interface{})
+					extraConfig := make(map[string]interface{}, 5)
+					inputMap["ExtraConfig"] = extraConfig
+					for key := range inputMap {
+						_, ok := fieldsMap[strings.ToLower(key)]
+						if !ok {
+							extraConfig[key] = inputMap[key]
+						}
+					}
+				}
+				return input, nil
+			},
+			c.DecodeHook)
+	})
 	if err != nil {
 		fmt.Println("Struct config error")
 	}
+	/*modules := viper.AllSettings()["module"].([]interface{})
+	for i := 0; i < len(modules); i++ {
+		Config.Module[i].ExtraConfig = modules[i].(map[string]interface{})
+	}*/
 	fmt.Println(Config)
 }

@@ -1,4 +1,4 @@
-package structUtils
+package interfaces
 
 import (
 	"github.com/fzxiao233/Vtb_Record/utils"
@@ -42,7 +42,6 @@ func TestVideoInfo_CreateLiveMsg(t *testing.T) {
 				CQBotMsg:        tt.fields.CQBotMsg,
 				TransRecordPath: tt.fields.TransRecordPath,
 			}
-			v.CreateLiveMsg()
 		})
 	}
 }
@@ -84,7 +83,6 @@ func TestVideoInfo_CreateNoticeMsg(t *testing.T) {
 				CQBotMsg:        tt.fields.CQBotMsg,
 				TransRecordPath: tt.fields.TransRecordPath,
 			}
-			v.CreateNoticeMsg()
 		})
 	}
 }

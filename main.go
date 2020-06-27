@@ -1,8 +1,8 @@
 package main
 
 import (
-	. "github.com/fzxiao233/Vtb_Record/plugins"
-	"github.com/fzxiao233/Vtb_Record/plugins/monitor"
+	"github.com/fzxiao233/Vtb_Record/live"
+	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	"log"
 )
@@ -13,7 +13,7 @@ func arrangeTask() {
 		if module.Enable {
 			for _, usersConfig := range module.Users {
 				log.Printf("%s|%s is up", module.Name, usersConfig.Name)
-				go StartMonitor(monitor.CreateVideoMonitor(module.Name), usersConfig)
+				go live.StartMonitor(monitor.CreateVideoMonitor(module), usersConfig)
 			}
 		}
 	}
