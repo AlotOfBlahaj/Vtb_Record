@@ -2,8 +2,8 @@ package utils
 
 import (
 	"bytes"
+	log "github.com/sirupsen/logrus"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 )
@@ -24,10 +24,10 @@ func ExecShell(name string, arg ...string) string {
 		_, errStderr = io.Copy(stderr, stderrIn)
 	}()
 	if errStderr != nil {
-		log.Printf("%v", errStderr)
+		log.Warn("%v", errStderr)
 	}
 	if errStdout != nil {
-		log.Printf("%v", errStdout)
+		log.Warn("%v", errStdout)
 	}
 	_ = co.Wait()
 	outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())

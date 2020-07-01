@@ -4,7 +4,7 @@ import (
 	"github.com/bitly/go-simplejson"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	. "github.com/fzxiao233/Vtb_Record/utils"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 type Bilibili struct {
@@ -52,7 +52,7 @@ func (b *Bilibili) CheckLive(usersConfig UsersConfig) bool {
 	err := b.getVideoInfo()
 	if err != nil {
 		b.isLive = false
-		log.Print(err)
+		log.Error(err)
 	}
 	if !b.isLive {
 		NoLiving("Bilibili", usersConfig.Name)

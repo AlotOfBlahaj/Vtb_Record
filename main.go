@@ -4,9 +4,46 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	. "github.com/fzxiao233/Vtb_Record/utils"
-	"log"
+	"github.com/orandin/lumberjackrus"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
+
+// Can't be func init as we need the parsed config
+func initLog() {
+	// Log as JSON instead of the default ASCII formatter.
+	log.SetFormatter(&log.TextFormatter{})
+	level := log.InfoLevel
+	if Config.LogLevel == "debug" {
+		level = log.DebugLevel
+	} else if Config.LogLevel == "info" {
+		level = log.InfoLevel
+	} else if Config.LogLevel == "warn" {
+		level = log.WarnLevel
+	} else if Config.LogLevel == "error" {
+		level = log.ErrorLevel
+	}
+	log.SetLevel(level)
+	hook, err := lumberjackrus.NewHook(
+		&lumberjackrus.LogFile{
+			Filename:   Config.LogFile,
+			MaxSize:    Config.LogFileSize,
+			MaxBackups: 1,
+			MaxAge:     1,
+			Compress:   false,
+			LocalTime:  false,
+		},
+		level,
+		&log.JSONFormatter{},
+		nil,
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	log.AddHook(hook)
+}
 
 func arrangeTask() {
 	//var ch chan int
@@ -34,9 +71,9 @@ func arrangeTask() {
 					ret, err := ReloadConfig()
 					if ret {
 						if err == nil {
-							log.Println("Config changed! New config: %s", Config)
+							log.Info("Config changed! New config: %s", Config)
 						} else {
-							log.Println("Config changed but loading failed: %s", err)
+							log.Warn("Config changed but loading failed: %s", err)
 						}
 					}
 				}
@@ -80,5 +117,6 @@ func arrangeTask() {
 	//<-ch
 }
 func main() {
+	initLog()
 	arrangeTask()
 }

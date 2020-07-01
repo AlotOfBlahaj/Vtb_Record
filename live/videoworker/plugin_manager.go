@@ -1,7 +1,7 @@
 package videoworker
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 	"sync"
 )
 
@@ -27,7 +27,7 @@ func (p *PluginManager) OnLiveStart(video *ProcessVideo) {
 			defer wg.Done()
 			err := plug.LiveStart(video)
 			if err != nil {
-				log.Print(err)
+				log.Warn(err)
 			}
 		}()
 	}
@@ -42,7 +42,7 @@ func (p *PluginManager) OnDownloadStart(video *ProcessVideo) {
 			defer wg.Done()
 			err := plug.DownloadStart(video)
 			if err != nil {
-				log.Print(err)
+				log.Warn(err)
 			}
 		}()
 	}
@@ -57,7 +57,7 @@ func (p *PluginManager) OnLiveEnd(video *ProcessVideo) {
 			defer wg.Done()
 			err := plug.LiveEnd(video)
 			if err != nil {
-				log.Print(err)
+				log.Warn(err)
 			}
 		}()
 	}

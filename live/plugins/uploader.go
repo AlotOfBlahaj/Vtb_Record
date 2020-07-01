@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 type UploadDict struct {
@@ -40,7 +40,7 @@ func (p *PluginUploader) DownloadStart(process *videoworker.ProcessVideo) error 
 		OriginTarget: video.Target,
 	}
 	data, _ := json.Marshal(u)
-	log.Println(string(data))
+	log.Debug(string(data))
 	utils.Publish(data, "upload")
 	return nil
 }

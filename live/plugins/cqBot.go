@@ -6,7 +6,7 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -27,9 +27,9 @@ func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
 	req.Header.Set("Authorization", "Bearer "+cc.CQToken)
 	_, err := client.Do(req)
 	if err != nil {
-		log.Print("CQbot error")
+		log.Warn("CQbot error")
 	} else {
-		log.Printf("%s", msg.Message)
+		log.Info("%s", msg.Message)
 	}
 }
 
@@ -60,7 +60,7 @@ func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 	}
 
 	if !config.NeedCQBot {
-		log.Print(video.UsersConfig.Name + " needn't cq")
+		log.Debug(video.UsersConfig.Name + " needn't cq")
 		return nil
 	}
 
@@ -73,7 +73,7 @@ func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 	for _, GroupId := range config.QQGroupID {
 		c.GroupId = GroupId
 		cc.sendGroupMsg(c)
-		log.Printf("%s|%s send notice to %d", video.Provider, video.UsersConfig.Name, GroupId)
+		log.Info("%s|%s send notice to %d", video.Provider, video.UsersConfig.Name, GroupId)
 	}
 	return nil
 }

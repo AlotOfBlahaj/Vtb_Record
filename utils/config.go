@@ -31,6 +31,9 @@ type ModuleConfig struct {
 }
 type MainConfig struct {
 	CheckSec        int
+	LogFile         string
+	LogFileSize     int
+	LogLevel        string
 	DownloadQuality string
 	DownloadDir     string
 	Module          []ModuleConfig

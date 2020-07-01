@@ -5,7 +5,7 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"time"
 )
@@ -39,7 +39,7 @@ func StartProcessVideo(LiveTrace monitor.LiveTrace, Monitor monitor.VideoMonitor
 }
 
 func (p *ProcessVideo) StartProcessVideo() {
-	log.Printf("%s|%s|%s is living. start to process", p.LiveStatus.Video.Provider, p.LiveStatus.Video.UsersConfig.Name, p.LiveStatus.Video.Title)
+	log.Info("%s|%s|%s is living. start to process", p.LiveStatus.Video.Provider, p.LiveStatus.Video.UsersConfig.Name, p.LiveStatus.Video.Title)
 	p.needStop = false //  默认在直播中
 	p.liveStartTime = time.Now()
 	p.finish = make(chan int)
@@ -113,14 +113,14 @@ func (p *ProcessVideo) appendTitleHistory(title string) {
 func (p *ProcessVideo) isNewLive() bool {
 	newLiveStatus := p.LiveTrace(p.Monitor)
 	if newLiveStatus.IsLive == false || p.LiveStatus.IsLive == false || (p.LiveStatus.IsLive == true && p.LiveStatus.Video.StreamingLink != newLiveStatus.Video.StreamingLink) {
-		log.Printf("[isNewLive]%s|%s|%s is new live or offline", p.LiveStatus.Video.Provider, p.LiveStatus.Video.UsersConfig.Name, p.LiveStatus.Video.Title)
+		log.Info("[isNewLive]%s|%s|%s is new live or offline", p.LiveStatus.Video.Provider, p.LiveStatus.Video.UsersConfig.Name, p.LiveStatus.Video.Title)
 		return true
 	} else {
 		if len(p.TitleHistory) == 0 || p.LiveStatus.Video.Title != newLiveStatus.Video.Title {
-			log.Printf("Room title changed from %s to %s", p.LiveStatus.Video.Title, newLiveStatus.Video.Title)
+			log.Info("Room title changed from %s to %s", p.LiveStatus.Video.Title, newLiveStatus.Video.Title)
 			p.appendTitleHistory(newLiveStatus.Video.Title)
 		}
-		log.Printf("[isNewLive]%s|%s|%s KeepAlive", p.LiveStatus.Video.Provider, p.LiveStatus.Video.UsersConfig.Name, p.LiveStatus.Video.Title)
+		log.Debug("[isNewLive]%s|%s|%s KeepAlive", p.LiveStatus.Video.Provider, p.LiveStatus.Video.UsersConfig.Name, p.LiveStatus.Video.Title)
 		return false
 	}
 }
@@ -132,7 +132,7 @@ func (p *ProcessVideo) getFullTitle() string {
 			Title:     p.LiveStatus.Video.Title,
 			StartTime: p.liveStartTime,
 		})
-		log.Printf("Warning: no TitleHistory!")
+		log.Warn("no TitleHistory!")
 	}
 
 	for _, titleHistory := range p.TitleHistory {
@@ -149,8 +149,8 @@ func (p *ProcessVideo) convertToMp4() string {
 	downloadDir := p.LiveStatus.Video.UsersConfig.DownloadDir
 	var videoName string
 	if len(p.videoPathList) == 0 {
-		log.Println("videoPathList is empty!!!!")
-		log.Println(p)
+		log.Warn("videoPathList is empty!!!!")
+		log.Warn(p)
 	} else if len(p.videoPathList) > 1 {
 		mergedName := utils.ChangeName(title + "_merged.mp4")
 		mergedPath := downloadDir + "/" + mergedName
@@ -170,7 +170,7 @@ func (l VideoPathList) mergeVideo(outpath string) string {
 	}
 	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", "-f", "mp4", outpath)
 	if !utils.IsFileExist(outpath) {
-		log.Printf("mergeVideo: %s the video file don't exist", outpath)
+		log.Warn("mergeVideo: %s the video file don't exist", outpath)
 		return ""
 	}
 	for _, aPath := range l {
@@ -182,7 +182,7 @@ func (l VideoPathList) mergeVideo(outpath string) string {
 func ts2mp4(tsPath string, outpath string) string {
 	utils.ExecShell("ffmpeg", "-i", tsPath, "-c", "copy", "-f", "mp4", outpath)
 	if !utils.IsFileExist(outpath) {
-		log.Printf("ts2mp4: %s the video file don't exist", outpath)
+		log.Warn("ts2mp4: %s the video file don't exist", outpath)
 		return ""
 	}
 	_ = os.Remove(tsPath)

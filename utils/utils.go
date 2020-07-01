@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/fzxiao233/Go-Emoji-Utils"
 	"github.com/mitchellh/mapstructure"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -51,7 +51,7 @@ func HttpGet(client *http.Client, url string, header map[string]string) ([]byte,
 	}
 	if err != nil {
 		err = fmt.Errorf("HttpGet error %w", err)
-		log.Print(err)
+		log.Warn(err)
 		return []byte{}, err
 	}
 	htmlBody, _ := ioutil.ReadAll(res.Body)

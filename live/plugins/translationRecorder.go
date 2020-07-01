@@ -5,7 +5,7 @@ import (
 	"github.com/bitly/go-simplejson"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 	"time"
 )
@@ -14,10 +14,10 @@ func callJsAPI(roomID string, status string, filename string) error {
 	_, err := utils.HttpGet(nil, "http://127.0.0.1:"+utils.Config.ExpressPort+"/api/live?roomID="+roomID+"&status="+status+"&filename="+filename, map[string]string{})
 	if err != nil {
 		err = fmt.Errorf("call danmaku error %v", err)
-		log.Print(err)
+		log.Warn(err)
 		return err
 	}
-	log.Printf("[Danmaku]%s: %s", roomID, status)
+	log.Debug("[Danmaku]%s: %s", roomID, status)
 	return nil
 }
 
@@ -27,12 +27,12 @@ func getRoomId(targetId string) string {
 	for {
 		resp, err = utils.HttpGet(nil, "https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid="+targetId, map[string]string{})
 		if err != nil {
-			log.Printf("cannot get roomid %v", err)
+			log.Error("cannot get roomid %v", err)
 			continue
 		}
 		respJson, err := simplejson.NewJson(resp)
 		if err != nil {
-			log.Printf("%s parse json error", targetId)
+			log.Error("%s parse json error", targetId)
 		}
 		if respJson != nil {
 			data := respJson.Get("data")

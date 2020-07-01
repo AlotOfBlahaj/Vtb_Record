@@ -3,7 +3,7 @@ package monitor
 import (
 	. "github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"log"
+	stdlog "log"
 	"net/http"
 	"net/url"
 	"time"
@@ -108,5 +108,5 @@ func CreateVideoMonitor(module utils.ModuleConfig) VideoMonitor {
 }
 
 func NoLiving(Provide string, Name string) {
-	log.Printf("%s|%s|is not living\r", Provide, Name)
+	stdlog.Printf("%s|%s|is not living\r", Provide, Name)
 }
