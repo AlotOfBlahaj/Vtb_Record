@@ -15,7 +15,24 @@ type MonitorCtx struct {
 }
 
 func (c *MonitorCtx) HttpGet(url string, header map[string]string) ([]byte, error) {
-	return utils.HttpGet(c.Client, url, header)
+	finalHeaders := make(map[string]string, 10)
+	for k, v := range header {
+		finalHeaders[k] = v
+	}
+	for k, v := range c.GetHeaders() {
+		finalHeaders[k] = v
+	}
+	return utils.HttpGet(c.Client, url, finalHeaders)
+}
+
+type HeadersConfig struct {
+	HttpHeaders map[string]string
+}
+
+func (c *MonitorCtx) GetHeaders() map[string]string {
+	config := HeadersConfig{}
+	utils.MapToStruct(c.ExtraModConfig, &config)
+	return config.HttpHeaders
 }
 
 func (c *MonitorCtx) GetProxy() (string, bool) {
@@ -71,7 +88,7 @@ type VideoMonitor interface {
 	GetCtx() *MonitorCtx
 }
 
-type LiveTrace func(monitor VideoMonitor, usersConfig utils.UsersConfig) *LiveStatus
+type LiveTrace func(monitor VideoMonitor) *LiveStatus
 
 func CreateVideoMonitor(module utils.ModuleConfig) VideoMonitor {
 	var monitor VideoMonitor
@@ -91,5 +108,5 @@ func CreateVideoMonitor(module utils.ModuleConfig) VideoMonitor {
 }
 
 func NoLiving(Provide string, Name string) {
-	log.Printf("%s|%s|is not living\n", Provide, Name)
+	log.Printf("%s|%s|is not living\r", Provide, Name)
 }

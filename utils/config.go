@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"os"
@@ -10,6 +11,7 @@ import (
 )
 
 var Config *MainConfig
+var ConfigChanged bool
 
 type UsersConfig struct {
 	TargetId     string
@@ -24,7 +26,6 @@ type ModuleConfig struct {
 	//Proxy           string
 	Name        string
 	Enable      bool
-	EnableTemp  bool
 	Users       []UsersConfig
 	ExtraConfig map[string]interface{}
 }
@@ -41,6 +42,8 @@ type MainConfig struct {
 
 func init() {
 	initConfig()
+	_, _ = ReloadConfig()
+	fmt.Println(Config)
 }
 
 func initConfig() {
@@ -54,6 +57,22 @@ func initConfig() {
 	if err != nil {
 		fmt.Printf("config file error: %s\n", err)
 		os.Exit(1)
+	}
+
+	ConfigChanged = true
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		ConfigChanged = true
+	})
+}
+
+func ReloadConfig() (bool, error) {
+	if !ConfigChanged {
+		return false, nil
+	}
+	ConfigChanged = false
+	err := viper.ReadInConfig()
+	if err != nil {
+		return true, err
 	}
 	Config = &MainConfig{}
 	mdMap := make(map[string]*mapstructure.Metadata, 10)
@@ -87,5 +106,5 @@ func initConfig() {
 	for i := 0; i < len(modules); i++ {
 		Config.Module[i].ExtraConfig = modules[i].(map[string]interface{})
 	}*/
-	fmt.Println(Config)
+	return true, nil
 }

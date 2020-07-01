@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
+	github.com/fsnotify/fsnotify v1.4.7
 	github.com/fzxiao233/Go-Emoji-Utils v0.0.0-20200305114615-005e99b02c2f
 	github.com/go-redis/redis v6.15.7+incompatible
 	github.com/gofrs/flock v0.7.1 // indirect
