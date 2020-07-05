@@ -17,7 +17,7 @@ func callJsAPI(roomID string, status string, filename string) error {
 		log.Warn(err)
 		return err
 	}
-	log.Debug("[Danmaku]%s: %s", roomID, status)
+	log.Debugf("[Danmaku]%s: %s", roomID, status)
 	return nil
 }
 
@@ -27,12 +27,12 @@ func getRoomId(targetId string) string {
 	for {
 		resp, err = utils.HttpGet(nil, "https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld?mid="+targetId, map[string]string{})
 		if err != nil {
-			log.Error("cannot get roomid %v", err)
+			log.Errorf("cannot get roomid %v", err)
 			continue
 		}
 		respJson, err := simplejson.NewJson(resp)
 		if err != nil {
-			log.Error("%s parse json error", targetId)
+			log.Errorf("%s parse json error", targetId)
 		}
 		if respJson != nil {
 			data := respJson.Get("data")

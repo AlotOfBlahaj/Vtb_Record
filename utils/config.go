@@ -5,6 +5,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
+	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -24,27 +25,31 @@ type UsersConfig struct {
 type ModuleConfig struct {
 	//EnableProxy     bool
 	//Proxy           string
-	Name        string
-	Enable      bool
-	Users       []UsersConfig
-	ExtraConfig map[string]interface{}
+	Name             string
+	Enable           bool
+	Users            []UsersConfig
+	DownloadProvider string
+	ExtraConfig      map[string]interface{}
 }
 type MainConfig struct {
-	CheckSec        int
-	LogFile         string
-	LogFileSize     int
-	LogLevel        string
-	DownloadQuality string
-	DownloadDir     string
-	Module          []ModuleConfig
-	RedisHost       string
-	ExpressPort     string
-	EnableTS2MP4    bool
-	ExtraConfig     map[string]interface{}
+	CriticalCheckSec int
+	NormalCheckSec   int
+	LogFile          string
+	LogFileSize      int
+	LogLevel         string
+	DownloadQuality  string
+	DownloadDir      string
+	Module           []ModuleConfig
+	RedisHost        string
+	ExpressPort      string
+	EnableTS2MP4     bool
+	ExtraConfig      map[string]interface{}
 }
 
 func init() {
+	log.Print("Init config!")
 	initConfig()
+	log.Print("Load config!")
 	_, _ = ReloadConfig()
 	fmt.Println(Config)
 }

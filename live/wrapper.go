@@ -19,7 +19,7 @@ func StartMonitor(mon monitor.VideoMonitor, usersConfig utils.UsersConfig) {
 	var fun = func(mon monitor.VideoMonitor) *interfaces.LiveStatus {
 		return &interfaces.LiveStatus{
 			IsLive: mon.CheckLive(usersConfig),
-			Video:  mon.CreateVideo(usersConfig),
+			Video:  monitor.CleanVideoInfo(mon.CreateVideo(usersConfig)),
 		}
 	}
 

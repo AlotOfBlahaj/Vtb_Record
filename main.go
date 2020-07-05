@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	. "github.com/fzxiao233/Vtb_Record/utils"
@@ -11,6 +12,7 @@ import (
 
 // Can't be func init as we need the parsed config
 func initLog() {
+	log.Printf("Init logging!")
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.TextFormatter{})
 	level := log.InfoLevel
@@ -39,19 +41,19 @@ func initLog() {
 	)
 
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("NewHook Error: %s", err))
 	}
 
 	log.AddHook(hook)
 }
 
 func arrangeTask() {
-	//var ch chan int
-	chans := make([][]bool, len(Config.Module))
+	log.Printf("Arrange tasks...")
+	status := make([][]bool, len(Config.Module))
 	for i, module := range Config.Module {
-		chans[i] = make([]bool, len(module.Users))
-		for j, _ := range chans[i] {
-			chans[i][j] = false
+		status[i] = make([]bool, len(module.Users))
+		for j, _ := range status[i] {
+			status[i][j] = false
 		}
 	}
 
@@ -60,20 +62,20 @@ func arrangeTask() {
 		for {
 			if ConfigChanged {
 				allDone := true
-				for mod_i, _ := range chans {
-					for _, ch := range chans[mod_i] {
+				/*for mod_i, _ := range status {
+					for _, ch := range status[mod_i] {
 						if ch != false {
 							allDone = false
 						}
 					}
-				}
+				}*/
 				if allDone {
 					ret, err := ReloadConfig()
 					if ret {
 						if err == nil {
-							log.Info("Config changed! New config: %s", Config)
+							log.Infof("Config changed! New config: %s", Config)
 						} else {
-							log.Warn("Config changed but loading failed: %s", err)
+							log.Warnf("Config changed but loading failed: %s", err)
 						}
 					}
 				}
@@ -87,34 +89,24 @@ func arrangeTask() {
 		for mod_i, module := range Config.Module {
 			if module.Enable {
 				for user_i, usersConfig := range module.Users {
-					if chans[mod_i][user_i] != false {
+					if status[mod_i][user_i] != false {
 						continue
 					}
-					chans[mod_i][user_i] = true //make(chan int)
+					status[mod_i][user_i] = true
 					//log.Printf("%s|%s is up", module.Name, usersConfig.Name)
 					go func(i, j int, mon monitor.VideoMonitor, userCon UsersConfig) {
 						live.StartMonitor(mon, userCon)
-						//chans[mod_i][user_i] <- 1
-						chans[i][j] = false
+						status[i][j] = false
 					}(mod_i, user_i, monitor.CreateVideoMonitor(module), usersConfig)
+					time.Sleep(time.Millisecond * time.Duration(10))
 				}
 			}
 		}
-		time.Sleep(time.Duration(Config.CheckSec) * time.Second)
-		for mod_i, _ := range chans {
-			for _, ch := range chans[mod_i] {
-				if ch != false {
-					/*select {
-					case <-ch:
-						chans[mod_i][user_i] = nil
-					default:
-
-					}*/
-				}
-			}
+		if time.Now().Minute() > 55 || time.Now().Minute() < 5 || (time.Now().Minute() > 25 && time.Now().Minute() < 35) {
+			time.Sleep(time.Duration(Config.CriticalCheckSec) * time.Second)
 		}
+		time.Sleep(time.Duration(Config.NormalCheckSec) * time.Second)
 	}
-	//<-ch
 }
 func main() {
 	initLog()

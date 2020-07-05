@@ -27,9 +27,9 @@ func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
 	req.Header.Set("Authorization", "Bearer "+cc.CQToken)
 	_, err := client.Do(req)
 	if err != nil {
-		log.Warn("CQbot error")
+		log.Warnf("CQbot error")
 	} else {
-		log.Info("%s", msg.Message)
+		log.Infof("%s", msg.Message)
 	}
 }
 
@@ -73,7 +73,7 @@ func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 	for _, GroupId := range config.QQGroupID {
 		c.GroupId = GroupId
 		cc.sendGroupMsg(c)
-		log.Info("%s|%s send notice to %d", video.Provider, video.UsersConfig.Name, GroupId)
+		log.Infof("%s|%s send notice to %d", video.Provider, video.UsersConfig.Name, GroupId)
 	}
 	return nil
 }

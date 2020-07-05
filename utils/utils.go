@@ -65,8 +65,8 @@ func IsFileExist(aFilepath string) bool {
 		return false
 	}
 }
-func GenerateFilepath(UserName string, VideoTitle string) string {
-	pathSlice := []string{GenerateDownloadDir(UserName), RemoveIllegalChar(VideoTitle)}
+func GenerateFilepath(DownDir string, VideoTitle string) string {
+	pathSlice := []string{DownDir, VideoTitle}
 	aFilepath := strings.Join(pathSlice, "/")
 	if IsFileExist(aFilepath) {
 		return ChangeName(aFilepath)
@@ -74,10 +74,9 @@ func GenerateFilepath(UserName string, VideoTitle string) string {
 		return aFilepath
 	}
 }
-func GenerateDownloadDir(UserName string) string {
-	dirPath := Config.DownloadDir + "/" + UserName
+func MakeDir(dirPath string) string {
 	if !IsFileExist(dirPath) {
-		err := os.Mkdir(dirPath, 0775)
+		err := os.MkdirAll(dirPath, 0775)
 		if err != nil {
 			log.Fatalf("mkdir error: %s", dirPath)
 		}
@@ -88,6 +87,7 @@ func ChangeName(aFilepath string) string {
 	dir, file := filepath.Split(aFilepath)
 	ext := path.Ext(file)
 	filename := strings.TrimSuffix(path.Base(file), ext)
+	filename += "_"
 	filename += strconv.FormatInt(time.Now().Unix(), 10)
 	return dir + filename + ext
 }
