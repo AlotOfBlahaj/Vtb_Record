@@ -3,10 +3,12 @@ package monitor
 import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,28 +33,44 @@ type BilibiliPoller struct {
 
 var Poller BilibiliPoller
 
-func getBilibiliCtx() *MonitorCtx {
-	var ctx *MonitorCtx
-	for _, m := range Config.Module {
+func getBilibiliMod() *config.ModuleConfig {
+	for _, m := range config.Config.Module {
 		if m.Name == "Bilibili" {
-			_ctx := createMonitorCtx(m)
-			ctx = &_ctx
-			break
+			return &m
 		}
 	}
+	return nil
+}
+
+func getBilibiliCtx() *MonitorCtx {
+	var ctx *MonitorCtx
+	ret := getBilibiliMod()
+	if ret == nil {
+		return nil
+	}
+	_ctx := createMonitorCtx(*ret)
+	ctx = &_ctx
 	return ctx
 }
 
-func (b *BilibiliPoller) GetStatus() error {
+func (b *BilibiliPoller) getStatusUseFollow() error {
 	ctx := getBilibiliCtx()
 	if ctx == nil {
 		return nil
 	}
 
+	_url, ok := ctx.ExtraModConfig["ApiHostUrl"]
+	var url string
+	if ok {
+		url = _url.(string)
+	} else {
+		url = "https://api.live.bilibili.com"
+	}
+
 	livingUids := make(map[int]LiveInfo)
 	retrivePage := func(page int) (bool, error) {
 		rawInfoJSON, err := ctx.HttpGet(
-			fmt.Sprintf("https://api.live.bilibili.com/xlive/web-ucenter/user/following?page=%d&page_size=10", page),
+			fmt.Sprintf("%s/xlive/web-ucenter/user/following?page=%d&page_size=10", url, page),
 			map[string]string{},
 		)
 		if err != nil {
@@ -75,7 +93,7 @@ func (b *BilibiliPoller) GetStatus() error {
 				StreamingLink: liveUrl,
 			}
 		}
-		log.Debugf("Got ret living data %s", users.MustArray())
+		//log.Debugf("Got ret living data %s", users.MustArray())
 		return ending, nil
 	}
 	for i := 0; ; i++ {
@@ -113,6 +131,53 @@ func (b *BilibiliPoller) GetStatus() error {
 	return nil
 }
 
+func (b *BilibiliPoller) getStatusUseBatch() error {
+	ctx := getBilibiliCtx()
+	_url, ok := ctx.ExtraModConfig["ApiHostUrl"]
+	var url string
+	if ok {
+		url = _url.(string)
+	} else {
+		url = "https://api.live.bilibili.com"
+	}
+
+	biliMod := getBilibiliMod()
+	allUids := make([]string, 0)
+	for _, u := range biliMod.Users {
+		allUids = append(allUids, u.TargetId)
+	}
+	livingUids := make(map[int]LiveInfo)
+	for i := 0; i < len(allUids); i += 200 {
+		payload := fmt.Sprintf("%s/room/v1/Room/get_status_info_by_uids?uids[]=%s",
+			url,
+			strings.Join(allUids[i:Min(i+200, len(allUids))], "&uids[]="))
+		rawInfoJSON, err := ctx.HttpGet(payload, map[string]string{})
+		if err != nil {
+			return err
+		}
+		infoJson, _ := simplejson.NewJson(rawInfoJSON)
+		users := infoJson.Get("data")
+		userMap := users.MustMap()
+		for uid, _ := range userMap {
+			user := users.Get(uid)
+			if user.Get("live_status").MustInt() == 1 {
+				liveUrl := fmt.Sprintf("https://live.bilibili.com/%d", user.Get("room_id").MustInt())
+				livingUids[user.Get("uid").MustInt()] = LiveInfo{
+					Title:         user.Get("title").MustString(),
+					StreamingLink: liveUrl,
+				}
+			}
+		}
+	}
+	b.LivingUids = livingUids
+	log.Debugf("Parsed uids: %s", b.LivingUids)
+	return nil
+}
+
+func (b *BilibiliPoller) GetStatus() error {
+	return b.getStatusUseBatch()
+}
+
 func (b *BilibiliPoller) StartPoll() error {
 	err := b.GetStatus()
 	if err != nil {
@@ -120,7 +185,7 @@ func (b *BilibiliPoller) StartPoll() error {
 	}
 	go func() {
 		for {
-			time.Sleep(time.Duration(Config.CriticalCheckSec) * time.Second)
+			time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second / 4)
 			err := b.GetStatus()
 			if err != nil {
 				log.Warnf("Error during polling GetStatus: %s", err)
@@ -185,7 +250,7 @@ func (b *Bilibili) getVideoInfoByRoom() error {
 	//log.Printf("%+v", b)
 }
 
-func (b *Bilibili) CreateVideo(usersConfig UsersConfig) *interfaces.VideoInfo {
+func (b *Bilibili) CreateVideo(usersConfig config.UsersConfig) *interfaces.VideoInfo {
 	v := &interfaces.VideoInfo{
 		Title:         b.Title,
 		Date:          GetTimeNow(),
@@ -197,7 +262,7 @@ func (b *Bilibili) CreateVideo(usersConfig UsersConfig) *interfaces.VideoInfo {
 	return v
 }
 
-func (b *Bilibili) CheckLive(usersConfig UsersConfig) bool {
+func (b *Bilibili) CheckLive(usersConfig config.UsersConfig) bool {
 	b.TargetId = usersConfig.TargetId
 	ret, ok := b.ctx.ExtraModConfig["UseFollowPolling"]
 	var err error
@@ -209,7 +274,7 @@ func (b *Bilibili) CheckLive(usersConfig UsersConfig) bool {
 
 	if err != nil {
 		b.isLive = false
-		log.Errorf("GetVideoInfo error: %s", err)
+		log.WithField("user", usersConfig.TargetId).Errorf("GetVideoInfo error: %s", err)
 	}
 	if !b.isLive {
 		NoLiving("Bilibili", usersConfig.Name)

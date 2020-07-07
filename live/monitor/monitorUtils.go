@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"github.com/fzxiao233/Vtb_Record/config"
 	. "github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/utils"
 	"net/http"
@@ -44,7 +45,7 @@ func (c *MonitorCtx) GetProxy() (string, bool) {
 	}
 }
 
-func createMonitorCtx(module utils.ModuleConfig) MonitorCtx {
+func createMonitorCtx(module config.ModuleConfig) MonitorCtx {
 	ctx := MonitorCtx{ExtraModConfig: module.ExtraConfig}
 	var client *http.Client
 	proxy, ok := ctx.GetProxy()
@@ -71,10 +72,10 @@ type BaseMonitor struct {
 	downloadProvider string
 }
 
-func (b *BaseMonitor) CreateVideo(usersConfig utils.UsersConfig) *VideoInfo {
+func (b *BaseMonitor) CreateVideo(usersConfig config.UsersConfig) *VideoInfo {
 	return nil
 }
-func (b *BaseMonitor) CheckLive(usersConfig utils.UsersConfig) bool {
+func (b *BaseMonitor) CheckLive(usersConfig config.UsersConfig) bool {
 	return false
 }
 
@@ -87,15 +88,15 @@ func (b *BaseMonitor) DownloadProvider() string {
 }
 
 type VideoMonitor interface {
-	CheckLive(usersConfig utils.UsersConfig) bool
-	CreateVideo(usersConfig utils.UsersConfig) *VideoInfo
+	CheckLive(usersConfig config.UsersConfig) bool
+	CreateVideo(usersConfig config.UsersConfig) *VideoInfo
 	GetCtx() *MonitorCtx
 	DownloadProvider() string
 }
 
 type LiveTrace func(monitor VideoMonitor) *LiveStatus
 
-func CreateVideoMonitor(module utils.ModuleConfig) VideoMonitor {
+func CreateVideoMonitor(module config.ModuleConfig) VideoMonitor {
 	var monitor VideoMonitor
 	//var monitor *BaseMonitor
 	ctx := createMonitorCtx(module)

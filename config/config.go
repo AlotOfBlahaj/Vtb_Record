@@ -1,4 +1,4 @@
-package utils
+package config
 
 import (
 	"fmt"
@@ -39,6 +39,7 @@ type MainConfig struct {
 	LogLevel         string
 	DownloadQuality  string
 	DownloadDir      string
+	UploadDir        string
 	Module           []ModuleConfig
 	RedisHost        string
 	ExpressPort      string

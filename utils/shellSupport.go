@@ -9,10 +9,10 @@ import (
 )
 
 func ExecShell(name string, arg ...string) (string, string) {
-	return ExecShellEx(name, true, arg...)
+	return ExecShellEx(nil, true, name, arg...)
 }
 
-func ExecShellEx(name string, redirect bool, arg ...string) (string, string) {
+func ExecShellEx(entry *log.Entry, redirect bool, name string, arg ...string) (string, string) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 	co := exec.Command(name, arg...)
 	stdoutIn, _ := co.StdoutPipe()
@@ -30,7 +30,7 @@ func ExecShellEx(name string, redirect bool, arg ...string) (string, string) {
 			in := bufio.NewScanner(stdoutIn)
 			for in.Scan() {
 				stdout.Write(in.Bytes())
-				log.Info(in.Text()) // write each line to your log, or anything you need
+				entry.Info(in.Text()) // write each line to your log, or anything you need
 			}
 		}()
 		go func() {
@@ -38,7 +38,7 @@ func ExecShellEx(name string, redirect bool, arg ...string) (string, string) {
 			in := bufio.NewScanner(stderrIn)
 			for in.Scan() {
 				stderr.Write(in.Bytes())
-				log.Info(in.Text()) // write each line to your log, or anything you need
+				entry.Info(in.Text()) // write each line to your log, or anything you need
 			}
 		}()
 	} else {

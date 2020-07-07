@@ -37,7 +37,7 @@ func MapToStruct(mapVal map[string]interface{}, structVal interface{}) error {
 
 func HttpGet(client *http.Client, url string, header map[string]string) ([]byte, error) {
 	if client == nil {
-		client = http.DefaultClient
+		client = &http.Client{}
 	}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101 Firefox/60.0")
@@ -49,11 +49,18 @@ func HttpGet(client *http.Client, url string, header map[string]string) ([]byte,
 	if res != nil {
 		defer res.Body.Close()
 	}
-	if err != nil {
+	if err != nil || res == nil {
 		err = fmt.Errorf("HttpGet error %w", err)
 		log.Warn(err)
 		return []byte{}, err
 	}
+
+	if res.StatusCode != 200 && res.StatusCode != 206 {
+		err = fmt.Errorf("HttpGet status code error %d", res.StatusCode)
+		//log.Warn(err)
+		return []byte{}, err
+	}
+
 	htmlBody, _ := ioutil.ReadAll(res.Body)
 	return htmlBody, nil
 }
@@ -109,4 +116,19 @@ func I2b(i int) bool {
 	} else {
 		return false
 	}
+}
+
+func Min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func RPartition(s string, sep string) (string, string, string) {
+	parts := strings.SplitAfter(s, sep)
+	if len(parts) == 1 {
+		return "", "", parts[0]
+	}
+	return strings.Join(parts[0:len(parts)-1], ""), sep, parts[len(parts)-1]
 }

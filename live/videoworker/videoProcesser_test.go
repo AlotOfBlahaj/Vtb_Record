@@ -1,10 +1,10 @@
 package videoworker
 
 import (
+	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
-	"github.com/fzxiao233/Vtb_Record/utils"
 	"testing"
 )
 
@@ -25,14 +25,14 @@ func TestProcessVideo_isNewLive(t *testing.T) {
 				Title:         "1",
 				Provider:      "mock",
 				StreamingLink: "3",
-				UsersConfig:   utils.UsersConfig{},
+				UsersConfig:   config.UsersConfig{},
 			}, isLive: true},
 			liveTrace: live.GetLiveStatus,
 			monitor: &monitor.Mock{
 				Video: &interfaces.VideoInfo{
 					Title:         "",
 					StreamingLink: "",
-					UsersConfig:   utils.UsersConfig{},
+					UsersConfig:   config.UsersConfig{},
 				},
 				IsLive: false,
 			},
@@ -42,14 +42,14 @@ func TestProcessVideo_isNewLive(t *testing.T) {
 				Title:         "1",
 				Provider:      "mock",
 				StreamingLink: "3",
-				UsersConfig:   utils.UsersConfig{},
+				UsersConfig:   config.UsersConfig{},
 			}, isLive: true},
 			liveTrace: live.GetLiveStatus,
 			monitor: &monitor.Mock{
 				Video: &interfaces.VideoInfo{
 					Title:         "1",
 					StreamingLink: "3",
-					UsersConfig:   utils.UsersConfig{},
+					UsersConfig:   config.UsersConfig{},
 				},
 				IsLive: true,
 			},
@@ -59,14 +59,14 @@ func TestProcessVideo_isNewLive(t *testing.T) {
 				Title:         "1",
 				Provider:      "mock",
 				StreamingLink: "3",
-				UsersConfig:   utils.UsersConfig{},
+				UsersConfig:   config.UsersConfig{},
 			}, isLive: true},
 			liveTrace: live.GetLiveStatus,
 			monitor: &monitor.Mock{
 				Video: &interfaces.VideoInfo{
 					Title:         "1",
 					StreamingLink: "4",
-					UsersConfig:   utils.UsersConfig{},
+					UsersConfig:   config.UsersConfig{},
 				},
 				IsLive: true,
 			},
@@ -76,14 +76,14 @@ func TestProcessVideo_isNewLive(t *testing.T) {
 				Title:         "1",
 				Provider:      "mock",
 				StreamingLink: "3",
-				UsersConfig:   utils.UsersConfig{},
+				UsersConfig:   config.UsersConfig{},
 			}, isLive: true},
 			liveTrace: live.GetLiveStatus,
 			monitor: &monitor.Mock{
 				Video: &interfaces.VideoInfo{
 					Title:         "2",
 					StreamingLink: "3",
-					UsersConfig:   utils.UsersConfig{},
+					UsersConfig:   config.UsersConfig{},
 				},
 				IsLive: true,
 			},

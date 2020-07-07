@@ -3,6 +3,7 @@ package monitor
 import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	"regexp"
@@ -44,7 +45,7 @@ func (y *Youtube) getVideoInfo() error {
 	return nil
 	//log.Printf("%+v", y)
 }
-func (y *Youtube) CreateVideo(usersConfig UsersConfig) *interfaces.VideoInfo {
+func (y *Youtube) CreateVideo(usersConfig config.UsersConfig) *interfaces.VideoInfo {
 	if !y.yfConfig.IsLive {
 		return &interfaces.VideoInfo{}
 	}
@@ -58,7 +59,7 @@ func (y *Youtube) CreateVideo(usersConfig UsersConfig) *interfaces.VideoInfo {
 	}
 	return v
 }
-func (y *Youtube) CheckLive(usersConfig UsersConfig) bool {
+func (y *Youtube) CheckLive(usersConfig config.UsersConfig) bool {
 	y.Url = "https://www.youtube.com/channel/" + usersConfig.TargetId + "/live"
 	err := y.getVideoInfo()
 	if err != nil {

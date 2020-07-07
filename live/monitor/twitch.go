@@ -1,6 +1,8 @@
 package monitor
 
-import "github.com/fzxiao233/Vtb_Record/utils"
+import (
+	"github.com/fzxiao233/Vtb_Record/config"
+)
 
 type Twitch struct {
 	ctx    MonitorCtx
@@ -15,6 +17,6 @@ func (t Twitch) getLiveStatus() error {
 	return nil
 }
 
-func (t Twitch) CheckLive(userConfig utils.UsersConfig) {
+func (t Twitch) CheckLive(userConfig config.UsersConfig) {
 	t.APIUrl = "https://api.twitch.tv/helix/streams?user_login=" + userConfig.TargetId
 }

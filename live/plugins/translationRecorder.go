@@ -3,6 +3,7 @@ package plugins
 import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
 	"github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
@@ -11,7 +12,7 @@ import (
 )
 
 func callJsAPI(roomID string, status string, filename string) error {
-	_, err := utils.HttpGet(nil, "http://127.0.0.1:"+utils.Config.ExpressPort+"/api/live?roomID="+roomID+"&status="+status+"&filename="+filename, map[string]string{})
+	_, err := utils.HttpGet(nil, "http://127.0.0.1:"+config.Config.ExpressPort+"/api/live?roomID="+roomID+"&status="+status+"&filename="+filename, map[string]string{})
 	if err != nil {
 		err = fmt.Errorf("call danmaku error %v", err)
 		log.Warn(err)
@@ -56,7 +57,7 @@ func (p *PluginTranslationRecorder) DownloadStart(process *videoworker.ProcessVi
 		return nil
 	}
 	filename := video.UsersConfig.TransBiliId + "_" + strconv.FormatInt(time.Now().Unix(), 10) + ".txt"
-	aFilePath := utils.Config.DownloadDir + "/" + filename
+	aFilePath := config.Config.DownloadDir + "/" + filename
 	err := callJsAPI(getRoomId(video.UsersConfig.TransBiliId), "1", filename)
 	if err != nil {
 		return err

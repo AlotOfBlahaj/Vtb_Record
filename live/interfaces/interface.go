@@ -1,8 +1,34 @@
 package interfaces
 
 import (
-	"github.com/fzxiao233/Vtb_Record/utils"
+	"fmt"
+	"github.com/fzxiao233/Vtb_Record/config"
+	"github.com/sirupsen/logrus"
 )
+
+type VideoInfoLogHook struct {
+}
+
+func (h *VideoInfoLogHook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+func (h *VideoInfoLogHook) Fire(entry *logrus.Entry) error {
+	_ret, ok := entry.Data["video"]
+	if !ok {
+		return nil
+	}
+	v, ok := _ret.(*VideoInfo)
+	if !ok {
+		return nil
+	}
+	entry.Data["video"] = fmt.Sprintf("%s|%s|%s", v.Provider, v.UsersConfig.Name, v.Title)
+	return nil
+}
+
+func init() {
+	logrus.AddHook(&VideoInfoLogHook{})
+}
 
 type VideoInfo struct {
 	Title           string
@@ -12,7 +38,7 @@ type VideoInfo struct {
 	FileName        string
 	FilePath        string
 	StreamingLink   string
-	UsersConfig     utils.UsersConfig
+	UsersConfig     config.UsersConfig
 	TransRecordPath string
 }
 

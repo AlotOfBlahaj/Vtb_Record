@@ -12,7 +12,7 @@ require (
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/onsi/gomega v1.9.0 // indirect
 	github.com/orandin/lumberjackrus v1.0.1
-	github.com/sirupsen/logrus v1.2.0
+	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/viper v1.6.2
 	go.uber.org/ratelimit v0.1.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect

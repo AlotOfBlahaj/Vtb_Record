@@ -1,9 +1,9 @@
 package plugins
 
 import (
+	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
-	"github.com/fzxiao233/Vtb_Record/utils"
 	"testing"
 )
 
@@ -19,7 +19,7 @@ func TestPluginCQBot_LiveStart(t *testing.T) {
 				FileName:        "",
 				FilePath:        "",
 				StreamingLink:   "",
-				UsersConfig:     utils.Config.Module[0].Users[0],
+				UsersConfig:     config.Config.Module[0].Users[0],
 				TransRecordPath: "",
 			},
 		},

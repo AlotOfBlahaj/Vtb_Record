@@ -2,34 +2,45 @@ package main
 
 import (
 	"fmt"
+	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
-	. "github.com/fzxiao233/Vtb_Record/utils"
+	"github.com/fzxiao233/Vtb_Record/utils"
 	"github.com/orandin/lumberjackrus"
 	log "github.com/sirupsen/logrus"
+	"path"
+	"runtime"
 	"time"
 )
 
 // Can't be func init as we need the parsed config
 func initLog() {
 	log.Printf("Init logging!")
+	log.SetReportCaller(true)
 	// Log as JSON instead of the default ASCII formatter.
-	log.SetFormatter(&log.TextFormatter{})
+	log.SetFormatter(&log.TextFormatter{
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			filename := path.Base(f.File)
+			_, _, shortfname := utils.RPartition(f.Function, ".")
+			return fmt.Sprintf("%s()", shortfname), fmt.Sprintf("%s:%d", filename, f.Line)
+		},
+	},
+	)
 	level := log.InfoLevel
-	if Config.LogLevel == "debug" {
+	if config.Config.LogLevel == "debug" {
 		level = log.DebugLevel
-	} else if Config.LogLevel == "info" {
+	} else if config.Config.LogLevel == "info" {
 		level = log.InfoLevel
-	} else if Config.LogLevel == "warn" {
+	} else if config.Config.LogLevel == "warn" {
 		level = log.WarnLevel
-	} else if Config.LogLevel == "error" {
+	} else if config.Config.LogLevel == "error" {
 		level = log.ErrorLevel
 	}
 	log.SetLevel(level)
 	hook, err := lumberjackrus.NewHook(
 		&lumberjackrus.LogFile{
-			Filename:   Config.LogFile,
-			MaxSize:    Config.LogFileSize,
+			Filename:   config.Config.LogFile,
+			MaxSize:    config.Config.LogFileSize,
 			MaxBackups: 1,
 			MaxAge:     1,
 			Compress:   false,
@@ -49,8 +60,8 @@ func initLog() {
 
 func arrangeTask() {
 	log.Printf("Arrange tasks...")
-	status := make([][]bool, len(Config.Module))
-	for i, module := range Config.Module {
+	status := make([][]bool, len(config.Config.Module))
+	for i, module := range config.Config.Module {
 		status[i] = make([]bool, len(module.Users))
 		for j, _ := range status[i] {
 			status[i][j] = false
@@ -60,7 +71,7 @@ func arrangeTask() {
 	go func() {
 		ticker := time.NewTicker(time.Second * time.Duration(1))
 		for {
-			if ConfigChanged {
+			if config.ConfigChanged {
 				allDone := true
 				/*for mod_i, _ := range status {
 					for _, ch := range status[mod_i] {
@@ -70,10 +81,10 @@ func arrangeTask() {
 					}
 				}*/
 				if allDone {
-					ret, err := ReloadConfig()
+					ret, err := config.ReloadConfig()
 					if ret {
 						if err == nil {
-							log.Infof("Config changed! New config: %s", Config)
+							log.Infof("Config changed! New config: %s", config.Config)
 						} else {
 							log.Warnf("Config changed but loading failed: %s", err)
 						}
@@ -86,7 +97,7 @@ func arrangeTask() {
 	}()
 
 	for {
-		for mod_i, module := range Config.Module {
+		for mod_i, module := range config.Config.Module {
 			if module.Enable {
 				for user_i, usersConfig := range module.Users {
 					if status[mod_i][user_i] != false {
@@ -94,7 +105,7 @@ func arrangeTask() {
 					}
 					status[mod_i][user_i] = true
 					//log.Printf("%s|%s is up", module.Name, usersConfig.Name)
-					go func(i, j int, mon monitor.VideoMonitor, userCon UsersConfig) {
+					go func(i, j int, mon monitor.VideoMonitor, userCon config.UsersConfig) {
 						live.StartMonitor(mon, userCon)
 						status[i][j] = false
 					}(mod_i, user_i, monitor.CreateVideoMonitor(module), usersConfig)
@@ -103,9 +114,9 @@ func arrangeTask() {
 			}
 		}
 		if time.Now().Minute() > 55 || time.Now().Minute() < 5 || (time.Now().Minute() > 25 && time.Now().Minute() < 35) {
-			time.Sleep(time.Duration(Config.CriticalCheckSec) * time.Second)
+			time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
 		}
-		time.Sleep(time.Duration(Config.NormalCheckSec) * time.Second)
+		time.Sleep(time.Duration(config.Config.NormalCheckSec) * time.Second)
 	}
 }
 func main() {
