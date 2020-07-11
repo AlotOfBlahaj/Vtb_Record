@@ -10,7 +10,7 @@
   "Module": [
     {
       "Name": "Youtube",
-      "Enable": true,
+      "Enable": false,
       "EnableTemp": false,
       "Users": [
         {
@@ -22,7 +22,7 @@
     },
     {
       "Name": "Twitcasting",
-      "Enable": true,
+      "Enable": false,
       "Users": [
         {
           "TargetId": "natsuiromatsuri",
@@ -36,8 +36,8 @@
       "Enable": true,
       "Users": [
         {
-          "TargetId": "336731767",
-          "Name": "natsuiromatsuri",
+          "TargetId": "4634167",
+          "Name": "tamaki",
           "NeedDownload": true
         }
       ]

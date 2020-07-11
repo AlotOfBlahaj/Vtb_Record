@@ -1,6 +1,9 @@
 package utils
 
-import "github.com/go-redis/redis"
+import (
+	"github.com/fzxiao233/Vtb_Record/config"
+	"github.com/go-redis/redis"
+)
 
 var RedisClient *redis.Client
 
@@ -10,7 +13,7 @@ func init() {
 func initRedis() *redis.Client {
 	RedisClient := redis.NewClient(
 		&redis.Options{
-			Addr:     Config.RedisHost,
+			Addr:     config.Config.RedisHost,
 			Password: "",
 			DB:       0,
 		})

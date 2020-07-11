@@ -1,10 +1,10 @@
-package worker
+package plugins
 
 import (
 	"encoding/json"
-	"github.com/fzxiao233/Vtb_Record/plugins/structUtils"
+	"github.com/fzxiao233/Vtb_Record/live/videoworker"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 type UploadDict struct {
@@ -19,7 +19,15 @@ type UploadDict struct {
 	OriginTarget string `json:"originTarget"`
 }
 
-func UploadVideo(video *structUtils.VideoInfo) {
+type PluginUploader struct {
+}
+
+func (p *PluginUploader) LiveStart(process *videoworker.ProcessVideo) error {
+	return nil
+}
+
+func (p *PluginUploader) DownloadStart(process *videoworker.ProcessVideo) error {
+	video := process.LiveStatus.Video
 	u := UploadDict{
 		Title:        video.Title,
 		Filename:     video.FileName,
@@ -32,6 +40,11 @@ func UploadVideo(video *structUtils.VideoInfo) {
 		OriginTarget: video.Target,
 	}
 	data, _ := json.Marshal(u)
-	log.Println(string(data))
+	log.Debug(string(data))
 	utils.Publish(data, "upload")
+	return nil
+}
+
+func (p *PluginUploader) LiveEnd(process *videoworker.ProcessVideo) error {
+	return nil
 }

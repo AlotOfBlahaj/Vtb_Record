@@ -3,10 +3,10 @@ package utils
 import (
 	"fmt"
 	"github.com/fzxiao233/Go-Emoji-Utils"
+	"github.com/mitchellh/mapstructure"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,22 +15,30 @@ import (
 	"time"
 )
 
-var client *http.Client
+//var client *http.Client
 
 func init() {
-	client = createClient()
+	//client = createClient()
 }
 
-func createClient() *http.Client {
-	if Config.EnableProxy == true {
-		client = createSOCKS5Proxy()
-	} else {
-		client = http.DefaultClient
+func MapToStruct(mapVal map[string]interface{}, structVal interface{}) error {
+	config := &mapstructure.DecoderConfig{
+		Metadata:         nil,
+		Result:           structVal,
+		WeaklyTypedInput: true,
 	}
-	return client
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return err
+	}
+	decoder.Decode(mapVal)
+	return nil
 }
 
-func HttpGet(url string, header map[string]string) ([]byte, error) {
+func HttpGet(client *http.Client, url string, header map[string]string) ([]byte, error) {
+	if client == nil {
+		client = &http.Client{}
+	}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101 Firefox/60.0")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.8")
@@ -41,27 +49,22 @@ func HttpGet(url string, header map[string]string) ([]byte, error) {
 	if res != nil {
 		defer res.Body.Close()
 	}
-	if err != nil {
+	if err != nil || res == nil {
 		err = fmt.Errorf("HttpGet error %w", err)
-		log.Print(err)
+		log.Warn(err)
 		return []byte{}, err
 	}
+
+	if res.StatusCode != 200 && res.StatusCode != 206 {
+		err = fmt.Errorf("HttpGet status code error %d", res.StatusCode)
+		//log.Warn(err)
+		return []byte{}, err
+	}
+
 	htmlBody, _ := ioutil.ReadAll(res.Body)
 	return htmlBody, nil
 }
-func createSOCKS5Proxy() *http.Client {
-	proxyUrl, _ := url.Parse("socks5://" + Config.Proxy)
-	transport := &http.Transport{
-		Proxy: http.ProxyURL(proxyUrl),
-	}
 
-	//adding the Transport object to the http Client
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   60 * time.Second,
-	}
-	return client
-}
 func IsFileExist(aFilepath string) bool {
 	if _, err := os.Stat(aFilepath); err == nil {
 		return true
@@ -69,8 +72,8 @@ func IsFileExist(aFilepath string) bool {
 		return false
 	}
 }
-func GenerateFilepath(UserName string, VideoTitle string) string {
-	pathSlice := []string{GenerateDownloadDir(UserName), RemoveIllegalChar(VideoTitle)}
+func GenerateFilepath(DownDir string, VideoTitle string) string {
+	pathSlice := []string{DownDir, VideoTitle}
 	aFilepath := strings.Join(pathSlice, "/")
 	if IsFileExist(aFilepath) {
 		return ChangeName(aFilepath)
@@ -78,10 +81,9 @@ func GenerateFilepath(UserName string, VideoTitle string) string {
 		return aFilepath
 	}
 }
-func GenerateDownloadDir(UserName string) string {
-	dirPath := Config.DownloadDir + "/" + UserName
+func MakeDir(dirPath string) string {
 	if !IsFileExist(dirPath) {
-		err := os.Mkdir(dirPath, 0775)
+		err := os.MkdirAll(dirPath, 0775)
 		if err != nil {
 			log.Fatalf("mkdir error: %s", dirPath)
 		}
@@ -92,6 +94,7 @@ func ChangeName(aFilepath string) string {
 	dir, file := filepath.Split(aFilepath)
 	ext := path.Ext(file)
 	filename := strings.TrimSuffix(path.Base(file), ext)
+	filename += "_"
 	filename += strconv.FormatInt(time.Now().Unix(), 10)
 	return dir + filename + ext
 }
@@ -113,4 +116,19 @@ func I2b(i int) bool {
 	} else {
 		return false
 	}
+}
+
+func Min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func RPartition(s string, sep string) (string, string, string) {
+	parts := strings.SplitAfter(s, sep)
+	if len(parts) == 1 {
+		return "", "", parts[0]
+	}
+	return strings.Join(parts[0:len(parts)-1], ""), sep, parts[len(parts)-1]
 }
