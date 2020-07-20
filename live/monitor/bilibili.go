@@ -185,7 +185,7 @@ func (b *BilibiliPoller) StartPoll() error {
 	}
 	go func() {
 		for {
-			time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second / 4)
+			time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
 			err := b.GetStatus()
 			if err != nil {
 				log.Warnf("Error during polling GetStatus: %s", err)

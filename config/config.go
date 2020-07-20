@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
+	"github.com/rclone/rclone/fs"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"log"
 	"os"
@@ -20,6 +22,7 @@ type UsersConfig struct {
 	DownloadDir  string
 	NeedDownload bool
 	TransBiliId  string
+	UserHeaders  map[string]string
 	ExtraConfig  map[string]interface{}
 }
 type ModuleConfig struct {
@@ -37,17 +40,19 @@ type MainConfig struct {
 	LogFile          string
 	LogFileSize      int
 	LogLevel         string
+	RLogLevel        string
 	DownloadQuality  string
-	DownloadDir      string
+	DownloadDir      []string
 	UploadDir        string
 	Module           []ModuleConfig
+	PprofHost        string
 	RedisHost        string
 	ExpressPort      string
 	EnableTS2MP4     bool
 	ExtraConfig      map[string]interface{}
 }
 
-func init() {
+func InitConfig() {
 	log.Print("Init config!")
 	initConfig()
 	log.Print("Load config!")
@@ -56,11 +61,11 @@ func init() {
 }
 
 func initConfig() {
-	viper.SetConfigName("config")
+	/*viper.SetConfigName("config")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("..")
 	viper.AddConfigPath("../..")
-	viper.SetConfigType("json")
+	viper.SetConfigType("json")*/
 	viper.WatchConfig()
 	err := viper.ReadInConfig()
 	if err != nil {
@@ -115,5 +120,29 @@ func ReloadConfig() (bool, error) {
 	for i := 0; i < len(modules); i++ {
 		Config.Module[i].ExtraConfig = modules[i].(map[string]interface{})
 	}*/
+	fs.Config.LogLevel = fs.LogLevelInfo
+	if Config.RLogLevel == "debug" {
+		fs.Config.LogLevel = fs.LogLevelDebug
+	} else if Config.RLogLevel == "info" {
+		fs.Config.LogLevel = fs.LogLevelInfo
+	} else if Config.RLogLevel == "warn" {
+		fs.Config.LogLevel = fs.LogLevelWarning
+	} else if Config.RLogLevel == "error" {
+		fs.Config.LogLevel = fs.LogLevelError
+	}
+	log.Printf("Set rclone log level to %s", fs.Config.LogLevel)
+
+	level := logrus.InfoLevel
+	if Config.LogLevel == "debug" {
+		level = logrus.DebugLevel
+	} else if Config.LogLevel == "info" {
+		level = logrus.InfoLevel
+	} else if Config.LogLevel == "warn" {
+		level = logrus.WarnLevel
+	} else if Config.LogLevel == "error" {
+		level = logrus.ErrorLevel
+	}
+	logrus.SetLevel(level)
+	log.Printf("Set log level to %s", level)
 	return true, nil
 }

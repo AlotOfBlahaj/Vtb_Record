@@ -16,10 +16,10 @@ type MonitorCtx struct {
 
 func (c *MonitorCtx) HttpGet(url string, header map[string]string) ([]byte, error) {
 	finalHeaders := make(map[string]string, 10)
-	for k, v := range header {
+	for k, v := range c.GetHeaders() {
 		finalHeaders[k] = v
 	}
-	for k, v := range c.GetHeaders() {
+	for k, v := range header {
 		finalHeaders[k] = v
 	}
 	return utils.HttpGet(c.Client, url, finalHeaders)

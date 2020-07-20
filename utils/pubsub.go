@@ -1,15 +1,13 @@
 package utils
 
 import (
+	"context"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/go-redis/redis"
 )
 
 var RedisClient *redis.Client
 
-func init() {
-	RedisClient = initRedis()
-}
 func initRedis() *redis.Client {
 	RedisClient := redis.NewClient(
 		&redis.Options{
@@ -20,5 +18,8 @@ func initRedis() *redis.Client {
 	return RedisClient
 }
 func Publish(data []byte, channel string) {
-	_ = RedisClient.Publish(channel, data)
+	if RedisClient == nil {
+		RedisClient = initRedis()
+	}
+	_ = RedisClient.Publish(context.Background(), channel, data)
 }

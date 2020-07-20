@@ -57,7 +57,7 @@ func (p *PluginTranslationRecorder) DownloadStart(process *videoworker.ProcessVi
 		return nil
 	}
 	filename := video.UsersConfig.TransBiliId + "_" + strconv.FormatInt(time.Now().Unix(), 10) + ".txt"
-	aFilePath := config.Config.DownloadDir + "/" + filename
+	aFilePath := video.UsersConfig.DownloadDir + "/" + filename
 	err := callJsAPI(getRoomId(video.UsersConfig.TransBiliId), "1", filename)
 	if err != nil {
 		return err

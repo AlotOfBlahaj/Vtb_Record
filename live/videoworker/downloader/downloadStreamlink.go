@@ -16,7 +16,7 @@ type DownloaderStreamlink struct {
 	Downloader
 }
 
-func (d *DownloaderStreamlink) StartDownload(video *interfaces.VideoInfo, proxy string, filepath string) error {
+func (d *DownloaderStreamlink) StartDownload(video *interfaces.VideoInfo, proxy string, cookie string, filepath string) error {
 	_arg, ok := video.UsersConfig.ExtraConfig["StreamLinkArgs"]
 	arg := []string{}
 	if ok {
