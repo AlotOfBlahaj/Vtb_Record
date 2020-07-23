@@ -61,7 +61,11 @@ func createMonitorCtx(module config.ModuleConfig) MonitorCtx {
 			Timeout:   60 * time.Second,
 		}
 	} else {
-		client = http.DefaultClient
+		//client = http.DefaultClient
+		client = &http.Client{
+			Transport: &http.Transport{},
+			Timeout:   60 * time.Second,
+		}
 	}
 	ctx.Client = client
 	return ctx

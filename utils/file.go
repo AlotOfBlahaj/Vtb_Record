@@ -55,7 +55,7 @@ func GetWriter(dst string) io.WriteCloser {
 	go func() {
 		_, err := operations.Rcat(context.Background(), fdst, dstFileName, reader, time.Now())
 		if err != nil {
-			log.Warnf("Rcat Error! err: %s", err)
+			log.Warnf("Rcat [%s] Error! err: %s", dst, err)
 		}
 	}()
 	return writer

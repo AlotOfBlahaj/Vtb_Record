@@ -7,10 +7,14 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	"github.com/fzxiao233/Vtb_Record/utils"
+	"github.com/lucas-clemente/quic-go"
+	"github.com/lucas-clemente/quic-go/http3"
 	"github.com/orandin/lumberjackrus"
 	"github.com/rclone/rclone/fs"
+	rconfig "github.com/rclone/rclone/fs/config"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"path"
@@ -81,10 +85,11 @@ func arrangeTask() {
 					}
 				}*/
 				if allDone {
+					rconfig.LoadConfig()
 					ret, err := config.ReloadConfig()
 					if ret {
 						if err == nil {
-							log.Infof("Config changed! New config: %s", config.Config)
+							log.Infof("\n\n\t\tConfig changed and load successfully!\n\n")
 						} else {
 							log.Warnf("Config changed but loading failed: %s", err)
 						}
@@ -95,6 +100,11 @@ func arrangeTask() {
 		}
 
 	}()
+
+	utils.MakeDir(config.Config.UploadDir)
+	for _, dir := range config.Config.DownloadDir {
+		utils.MakeDir(dir)
+	}
 
 	defer func() {
 		panic("arrangeTask goes out!!!")
@@ -184,15 +194,29 @@ func printMem() {
 }
 
 func main() {
-	http.DefaultTransport = &http.Transport{
-		DisableKeepAlives:  true, // disable keep alive to avoid connection reset
-		DisableCompression: false,
+	rand.Seed(time.Now().UnixNano())
+	if true {
+		http.DefaultTransport = &http.Transport{
+			DisableKeepAlives:  true, // disable keep alive to avoid connection reset
+			DisableCompression: false,
+			//ForceAttemptHTTP2:      true,
+		}
+	} else {
+		http.DefaultTransport = &http3.RoundTripper{
+			QuicConfig: &quic.Config{
+				MaxIdleTimeout:        time.Second * 20,
+				MaxIncomingStreams:    0,
+				MaxIncomingUniStreams: 0,
+				StatelessResetKey:     nil,
+				KeepAlive:             false,
+			},
+		}
 	}
 	http.DefaultClient.Transport = http.DefaultTransport
 	fs.Config.Transfers = 20
-	//fs.Config.ConnectTimeout = time.Second * 4
-	//fs.Config.Timeout = time.Second * 8
-	//fs.Config.TPSLimit = 0
+	fs.Config.ConnectTimeout = time.Second * 2
+	fs.Config.Timeout = time.Second * 4
+	fs.Config.TPSLimit = 0
 	//fs.Config.NoGzip = false
 	confPath := flag.String("config", "config.json", "config.json location")
 	flag.Parse()

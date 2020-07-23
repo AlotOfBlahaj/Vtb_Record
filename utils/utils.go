@@ -53,7 +53,7 @@ func HttpGetBuffer(client *http.Client, url string, header map[string]string, bu
 	}
 	if err != nil || res == nil {
 		err = fmt.Errorf("HttpGet error %w", err)
-		log.Warn(err)
+		//log.Warn(err)
 		return nil, err
 	}
 
@@ -124,15 +124,19 @@ func GenerateFilepath(DownDir string, VideoTitle string) string {
 	}*/
 	return ChangeName(aFilepath)
 }
-func MakeDir(dirPath string) string {
-	if !IsFileExist(dirPath) {
+func MakeDir(dirPath string) (ret string, err error) {
+	//if !IsFileExist(dirPath) {
+	if true {
 		//err := os.MkdirAll(dirPath, 0775)
-		err := MkdirAll(dirPath)
+		err = MkdirAll(dirPath)
 		if err != nil {
-			log.Fatalf("mkdir error: %s", dirPath)
+			log.Errorf("mkdir error: %s, err: %s", dirPath, err)
+			ret = ""
+			return
 		}
+		return dirPath, nil
 	}
-	return dirPath
+	return dirPath, nil
 }
 
 func AddSuffix(aFilepath string, suffix string) string {

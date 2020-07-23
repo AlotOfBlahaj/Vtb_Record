@@ -7,6 +7,7 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -146,6 +147,7 @@ func (b *BilibiliPoller) getStatusUseBatch() error {
 	for _, u := range biliMod.Users {
 		allUids = append(allUids, u.TargetId)
 	}
+	rand.Shuffle(len(allUids), func(i, j int) { allUids[i], allUids[j] = allUids[j], allUids[i] })
 	livingUids := make(map[int]LiveInfo)
 	for i := 0; i < len(allUids); i += 200 {
 		payload := fmt.Sprintf("%s/room/v1/Room/get_status_info_by_uids?uids[]=%s",
@@ -183,9 +185,15 @@ func (b *BilibiliPoller) StartPoll() error {
 	if err != nil {
 		return err
 	}
+	biliMod := getBilibiliMod()
+	_interval, ok := biliMod.ExtraConfig["PollInterval"]
+	interval := time.Duration(config.Config.CriticalCheckSec) * time.Second
+	if ok {
+		interval = time.Duration(_interval.(float64)) * time.Second
+	}
 	go func() {
 		for {
-			time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
+			time.Sleep(interval)
 			err := b.GetStatus()
 			if err != nil {
 				log.Warnf("Error during polling GetStatus: %s", err)

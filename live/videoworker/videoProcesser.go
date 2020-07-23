@@ -66,15 +66,19 @@ func (p *ProcessVideo) StartProcessVideo() {
 	go p.Plugins.OnLiveStart(p)
 	go p.keepLiveAlive()
 	if p.isNeedDownload() {
-		p.prepareDownload()
-		go p.Plugins.OnDownloadStart(p)
-		go p.startDownloadVideo()
+		if err := p.prepareDownload(); err != nil {
+			log.Warnf("Failed to prepare download, err: %s", err)
+			p.finish <- -1
+		} else {
+			go p.Plugins.OnDownloadStart(p)
+			go p.startDownloadVideo()
+		}
 	}
 	<-p.finish
 	p.Plugins.OnLiveEnd(p)
 }
 
-func (p *ProcessVideo) prepareDownload() {
+func (p *ProcessVideo) prepareDownload() error {
 	var pathSlice []string
 	if !config.Config.EnableTS2MP4 {
 		pathSlice = []string{utils.RandChooseStr(config.Config.DownloadDir), p.LiveStatus.Video.UsersConfig.Name,
@@ -83,9 +87,14 @@ func (p *ProcessVideo) prepareDownload() {
 		pathSlice = []string{utils.RandChooseStr(config.Config.DownloadDir), p.LiveStatus.Video.UsersConfig.Name}
 	}
 	dirpath := strings.Join(pathSlice, "/")
-	log.Debugf("Making directory: %s", dirpath)
-	p.LiveStatus.Video.UsersConfig.DownloadDir = utils.MakeDir(dirpath)
+	ret, err := utils.MakeDir(dirpath)
+	log.Debugf("Made directory: %s, ret: %s, err: %s", dirpath, ret, err)
+	if err != nil {
+		return err
+	}
+	p.LiveStatus.Video.UsersConfig.DownloadDir = ret
 	p.videoPathList = VideoPathList{}
+	return nil
 }
 
 func (p *ProcessVideo) startDownloadVideo() {
@@ -152,6 +161,7 @@ func (p *ProcessVideo) isNeedDownload() bool {
 func (p *ProcessVideo) keepLiveAlive() {
 	logger := p.getLogger()
 	ticker := time.NewTicker(time.Second * time.Duration(config.Config.NormalCheckSec*3))
+	defer ticker.Stop()
 	for {
 		select {
 		case _ = <-ticker.C:
@@ -214,30 +224,32 @@ func (p *ProcessVideo) getFullTitle() string {
 
 func (p *ProcessVideo) postProcessing() string {
 	logger := log.WithField("video", p.LiveStatus.Video)
+	pathSlice := []string{config.Config.UploadDir, p.LiveStatus.Video.UsersConfig.Name} // , p.getFullTitle()
+	dirpath := strings.Join(pathSlice, "/")
+	_, err := utils.MakeDir(filepath.Dir(dirpath))
+	if err != nil {
+		return ""
+	}
+
 	if config.Config.EnableTS2MP4 {
-		return p.convertToMp4()
+		return p.convertToMp4(dirpath)
 	} else {
-		pathSlice := []string{config.Config.UploadDir, p.LiveStatus.Video.UsersConfig.Name, p.getFullTitle()}
-		dirpath := strings.Join(pathSlice, "/")
-		utils.MakeDir(filepath.Dir(dirpath))
+		dirpath += "/"
+		dirpath += p.getFullTitle()
 		logger.Infof("Renaming %s to %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		//err := os.Rename(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
-		err := utils.MoveFiles(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
+		err = utils.MoveFiles(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		if err != nil {
-			logger.Warn("Failed to rename! err: %s", err)
+			logger.Warn("Failed to rename from [%s] to [%s]! err: %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath, err)
 			return ""
 		}
 		return dirpath
 	}
 }
 
-func (p *ProcessVideo) convertToMp4() string {
+func (p *ProcessVideo) convertToMp4(dirpath string) string {
 	//livetime := p.liveStartTime.Format("2006-01-02 15:04:05")
 	//title := fmt.Sprintf("【%s】", livetime) + p.LiveStatus.Video.Title
-	pathSlice := []string{config.Config.UploadDir, p.LiveStatus.Video.UsersConfig.Name}
-	dirpath := strings.Join(pathSlice, "/")
-	utils.MakeDir(dirpath)
-
 	title := p.getFullTitle()
 	var videoName string
 	if len(p.videoPathList) == 0 {

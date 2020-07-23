@@ -57,7 +57,7 @@ func InitConfig() {
 	initConfig()
 	log.Print("Load config!")
 	_, _ = ReloadConfig()
-	fmt.Println(Config)
+	//fmt.Println(Config)
 }
 
 func initConfig() {
