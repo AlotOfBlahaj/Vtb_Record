@@ -48,7 +48,8 @@
   "EnableProxy": false,  // 是否启用代理
   "Proxy": "127.0.0.1:10800",  //代理地址，应为socks5代理
   "RedisHost": "127.0.0.1:6379",  //Redis数据库地址 用于启用上传功能，不使用无需配置
-  "CheckSec": 30,  // 检测间隔
+  "CriticalCheckSec": 30, // 检测间隔
+  "NormalCheckSec": 30, // 检测间隔
   "ExpressPort": 3000,  // 配置同传获取服务器的端口，详细见后文
   "DownloadQuality": "best",  // 配置下载画质 best为最佳画质 建议不调整 可选: best 1080p60 720p
   "DownloadDir": "/home/ubuntu/Matsuri",  // 下载目录 注意后无斜杠
