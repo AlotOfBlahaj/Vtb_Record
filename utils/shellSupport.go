@@ -9,7 +9,7 @@ import (
 )
 
 func ExecShell(name string, arg ...string) (string, string) {
-	return ExecShellEx(nil, true, name, arg...)
+	return ExecShellEx(log.NewEntry(log.StandardLogger()), true, name, arg...)
 }
 
 func ExecShellEx(entry *log.Entry, redirect bool, name string, arg ...string) (string, string) {

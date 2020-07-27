@@ -23,13 +23,13 @@ func (p *PluginManager) OnLiveStart(video *ProcessVideo) {
 	var wg sync.WaitGroup
 	wg.Add(len(p.plugins))
 	for _, plug := range p.plugins {
-		go func() {
+		go func(callback PluginCallback) {
 			defer wg.Done()
-			err := plug.LiveStart(video)
+			err := callback.LiveStart(video)
 			if err != nil {
-				log.Errorf("plugin #{plug} livestart error: %s", err)
+				log.Errorf("plugin %s livestart error: %s", callback, err)
 			}
-		}()
+		}(plug)
 	}
 	wg.Wait()
 }
@@ -38,13 +38,13 @@ func (p *PluginManager) OnDownloadStart(video *ProcessVideo) {
 	var wg sync.WaitGroup
 	wg.Add(len(p.plugins))
 	for _, plug := range p.plugins {
-		go func() {
+		go func(callback PluginCallback) {
 			defer wg.Done()
-			err := plug.DownloadStart(video)
+			err := callback.LiveStart(video)
 			if err != nil {
-				log.Errorf("plugin #{plug} downloadstart error: %s", err)
+				log.Errorf("plugin %s downloadstart error: %s", callback, err)
 			}
-		}()
+		}(plug)
 	}
 	wg.Wait()
 }
@@ -53,13 +53,13 @@ func (p *PluginManager) OnLiveEnd(video *ProcessVideo) {
 	var wg sync.WaitGroup
 	wg.Add(len(p.plugins))
 	for _, plug := range p.plugins {
-		go func() {
+		go func(callback PluginCallback) {
 			defer wg.Done()
-			err := plug.LiveEnd(video)
+			err := callback.LiveStart(video)
 			if err != nil {
-				log.Errorf("plugin #{plug} liveend error: %s", err)
+				log.Errorf("plugin %s liveend error: %s", callback, err)
 			}
-		}()
+		}(plug)
 	}
 	wg.Wait()
 }

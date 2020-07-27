@@ -1,6 +1,7 @@
 package videoworker
 
 import (
+	"context"
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
@@ -8,6 +9,7 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live/videoworker/downloader"
 	"github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,12 +34,19 @@ type ProcessVideo struct {
 	finish        chan int
 }
 
+var limit *rate.Limiter
+
+func init() {
+	limit = rate.NewLimiter(rate.Every(time.Second*5), 1)
+}
+
 func StartProcessVideo(LiveTrace monitor.LiveTrace, Monitor monitor.VideoMonitor, Plugins PluginManager) *ProcessVideo {
 	p := &ProcessVideo{LiveTrace: LiveTrace, Monitor: Monitor, Plugins: Plugins}
 	liveStatus := LiveTrace(Monitor)
 	if liveStatus.IsLive {
 		p.LiveStatus = liveStatus
 		p.appendTitleHistory(p.LiveStatus.Video.Title)
+		limit.Wait(context.Background())
 		p.StartProcessVideo()
 	}
 	return p
@@ -57,44 +66,73 @@ func (p *ProcessVideo) StartProcessVideo() {
 	go p.Plugins.OnLiveStart(p)
 	go p.keepLiveAlive()
 	if p.isNeedDownload() {
-		go p.Plugins.OnDownloadStart(p)
-		go p.startDownloadVideo()
+		if err := p.prepareDownload(); err != nil {
+			log.Warnf("Failed to prepare download, err: %s", err)
+			p.finish <- -1
+		} else {
+			go p.Plugins.OnDownloadStart(p)
+			go p.startDownloadVideo()
+		}
 	}
 	<-p.finish
 	p.Plugins.OnLiveEnd(p)
 }
 
-func (p *ProcessVideo) startDownloadVideo() {
-	logger := p.getLogger()
+func (p *ProcessVideo) prepareDownload() error {
 	var pathSlice []string
 	if !config.Config.EnableTS2MP4 {
-		pathSlice = []string{config.Config.DownloadDir, p.LiveStatus.Video.UsersConfig.Name,
+		pathSlice = []string{utils.RandChooseStr(config.Config.DownloadDir), p.LiveStatus.Video.UsersConfig.Name,
 			p.liveStartTime.Format("20060102 1504")}
 	} else {
-		pathSlice = []string{config.Config.DownloadDir, p.LiveStatus.Video.UsersConfig.Name}
+		pathSlice = []string{utils.RandChooseStr(config.Config.DownloadDir), p.LiveStatus.Video.UsersConfig.Name}
 	}
 	dirpath := strings.Join(pathSlice, "/")
-	log.Debugf("Making directory: %s", dirpath)
-	p.LiveStatus.Video.UsersConfig.DownloadDir = utils.MakeDir(dirpath)
+	ret, err := utils.MakeDir(dirpath)
+	log.Debugf("Made directory: %s, ret: %s, err: %s", dirpath, ret, err)
+	if err != nil {
+		return err
+	}
+	p.LiveStatus.Video.UsersConfig.DownloadDir = ret
 	p.videoPathList = VideoPathList{}
+	return nil
+}
+
+func (p *ProcessVideo) startDownloadVideo() {
+	logger := p.getLogger()
+	dirpath := p.LiveStatus.Video.UsersConfig.DownloadDir
+
 	var failRecord []time.Time
 	for {
 		ctx := p.Monitor.GetCtx()
 		proxy, _ := ctx.GetProxy()
 		down := downloader.GetDownloader(p.Monitor.DownloadProvider())
 		filePath := utils.GenerateFilepath(dirpath, p.LiveStatus.Video.Title+".ts")
-		aFilePath := down.DownloadVideo(p.LiveStatus.Video, proxy, filePath)
+		cookie := ""
+		header := p.Monitor.GetCtx().GetHeaders()
+		if header != nil {
+			cookie = header["Cookie"]
+		}
+		aFilePath := down.DownloadVideo(p.LiveStatus.Video, proxy, cookie, filePath)
 		if aFilePath != "" {
 			p.videoPathList = append(p.videoPathList, aFilePath)
 		} else {
 			failRecord = append(failRecord, time.Now())
 			logger.Info("Failed to record, trying to refresh live state!")
-			p.triggerChan <- 1 // refresh at once
+
+			func() {
+				defer func() {
+					recover()
+				}()
+				p.triggerChan <- 1 // refresh at once
+			}()
+
 			if len(failRecord) >= 3 {
 				if time.Now().Unix()-failRecord[0].Unix() < 30 {
 					logger.Info("Waiting for next refresh before we retry")
-					failRecord = make([]time.Time, 0)
-					time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
+					//failRecord = make([]time.Time, 0)
+					//time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
+					failRecord = failRecord[1:]
+					time.Sleep(5 * time.Second) // be patient
 				} else {
 					failRecord = failRecord[1:]
 				}
@@ -106,11 +144,9 @@ func (p *ProcessVideo) startDownloadVideo() {
 		}
 	}
 
+	logger.Info("Do postprocessing...")
 	videoName := p.postProcessing()
-	if videoName == "" {
-		p.finish <- 1
-		return
-	} else {
+	if videoName != "" {
 		//video := p.LiveStatus.Video
 		//video.FileName = videoName
 		//video.FilePath = video.UsersConfig.DownloadDir + "/" + video.FileName
@@ -125,6 +161,7 @@ func (p *ProcessVideo) isNeedDownload() bool {
 func (p *ProcessVideo) keepLiveAlive() {
 	logger := p.getLogger()
 	ticker := time.NewTicker(time.Second * time.Duration(config.Config.NormalCheckSec*3))
+	defer ticker.Stop()
 	for {
 		select {
 		case _ = <-ticker.C:
@@ -135,6 +172,7 @@ func (p *ProcessVideo) keepLiveAlive() {
 		if p.isNewLive() {
 			p.needStop = true
 			if p.isNeedDownload() {
+				close(p.triggerChan)
 				return //  需要下载时不由此控制end
 			}
 			p.finish <- 1
@@ -159,6 +197,7 @@ func (p *ProcessVideo) isNewLive() bool {
 	} else {
 		if len(p.TitleHistory) == 0 || p.LiveStatus.Video.Title != newLiveStatus.Video.Title {
 			logger.Infof("Room title changed from %s to %s", p.LiveStatus.Video.Title, newLiveStatus.Video.Title)
+			p.LiveStatus.Video.Title = newLiveStatus.Video.Title
 			p.appendTitleHistory(newLiveStatus.Video.Title)
 		}
 		logger.Debugf("[isNewLive] KeepAlive")
@@ -185,29 +224,32 @@ func (p *ProcessVideo) getFullTitle() string {
 
 func (p *ProcessVideo) postProcessing() string {
 	logger := log.WithField("video", p.LiveStatus.Video)
+	pathSlice := []string{config.Config.UploadDir, p.LiveStatus.Video.UsersConfig.Name} // , p.getFullTitle()
+	dirpath := strings.Join(pathSlice, "/")
+	_, err := utils.MakeDir(filepath.Dir(dirpath))
+	if err != nil {
+		return ""
+	}
+
 	if config.Config.EnableTS2MP4 {
-		return p.convertToMp4()
+		return p.convertToMp4(dirpath)
 	} else {
-		pathSlice := []string{config.Config.UploadDir, p.LiveStatus.Video.UsersConfig.Name, p.getFullTitle()}
-		dirpath := strings.Join(pathSlice, "/")
-		utils.MakeDir(filepath.Dir(dirpath))
+		dirpath += "/"
+		dirpath += p.getFullTitle()
 		logger.Infof("Renaming %s to %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
-		err := os.Rename(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
+		//err := os.Rename(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
+		err = utils.MoveFiles(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		if err != nil {
-			logger.Warn("Failed to rename!")
+			logger.Warn("Failed to rename from [%s] to [%s]! err: %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath, err)
 			return ""
 		}
 		return dirpath
 	}
 }
 
-func (p *ProcessVideo) convertToMp4() string {
+func (p *ProcessVideo) convertToMp4(dirpath string) string {
 	//livetime := p.liveStartTime.Format("2006-01-02 15:04:05")
 	//title := fmt.Sprintf("【%s】", livetime) + p.LiveStatus.Video.Title
-	pathSlice := []string{config.Config.UploadDir, p.LiveStatus.Video.UsersConfig.Name}
-	dirpath := strings.Join(pathSlice, "/")
-	utils.MakeDir(dirpath)
-
 	title := p.getFullTitle()
 	var videoName string
 	if len(p.videoPathList) == 0 {

@@ -7,9 +7,6 @@ import (
 
 var RedisClient *redis.Client
 
-func init() {
-	RedisClient = initRedis()
-}
 func initRedis() *redis.Client {
 	RedisClient := redis.NewClient(
 		&redis.Options{
@@ -20,5 +17,8 @@ func initRedis() *redis.Client {
 	return RedisClient
 }
 func Publish(data []byte, channel string) {
+	if RedisClient == nil {
+		RedisClient = initRedis()
+	}
 	_ = RedisClient.Publish(channel, data)
 }

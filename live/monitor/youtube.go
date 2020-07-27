@@ -17,11 +17,16 @@ type yfConfig struct {
 type Youtube struct {
 	BaseMonitor
 	yfConfig
-	Url string
+	usersConfig config.UsersConfig
 }
 
 func (y *Youtube) getVideoInfo() error {
-	htmlBody, err := y.ctx.HttpGet(y.Url, map[string]string{})
+	url := "https://www.youtube.com/channel/" + y.usersConfig.TargetId + "/live"
+	headers := y.usersConfig.UserHeaders
+	if headers == nil {
+		headers = map[string]string{}
+	}
+	htmlBody, err := y.ctx.HttpGet(url, headers)
 	if err != nil {
 		return err
 	}
@@ -60,7 +65,7 @@ func (y *Youtube) CreateVideo(usersConfig config.UsersConfig) *interfaces.VideoI
 	return v
 }
 func (y *Youtube) CheckLive(usersConfig config.UsersConfig) bool {
-	y.Url = "https://www.youtube.com/channel/" + usersConfig.TargetId + "/live"
+	y.usersConfig = usersConfig
 	err := y.getVideoInfo()
 	if err != nil {
 		y.IsLive = false
