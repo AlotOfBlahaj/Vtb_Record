@@ -126,3 +126,23 @@ func CleanVideoInfo(info *VideoInfo) *VideoInfo {
 	info.Title = utils.RemoveIllegalChar(info.Title)
 	return info
 }
+
+func getMod(modName string) *config.ModuleConfig {
+	for _, m := range config.Config.Module {
+		if m.Name == modName {
+			return &m
+		}
+	}
+	return nil
+}
+
+func getCtx(modName string) *MonitorCtx {
+	var ctx *MonitorCtx
+	ret := getMod(modName)
+	if ret == nil {
+		return nil
+	}
+	_ctx := createMonitorCtx(*ret)
+	ctx = &_ctx
+	return ctx
+}

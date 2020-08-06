@@ -88,10 +88,10 @@ func ReloadConfig() (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	Config = &MainConfig{}
+	config := &MainConfig{}
 	mdMap := make(map[string]*mapstructure.Metadata, 10)
 	mdMap[""] = &mapstructure.Metadata{}
-	err = viper.Unmarshal(Config, func(c *mapstructure.DecoderConfig) {
+	err = viper.Unmarshal(config, func(c *mapstructure.DecoderConfig) {
 		c.DecodeHook = mapstructure.ComposeDecodeHookFunc(
 			func(inType reflect.Type, outType reflect.Type, input interface{}) (interface{}, error) {
 				if inType.Kind() == reflect.Map && outType.Kind() == reflect.Struct { // we'll decoding a struct
@@ -120,6 +120,8 @@ func ReloadConfig() (bool, error) {
 	for i := 0; i < len(modules); i++ {
 		Config.Module[i].ExtraConfig = modules[i].(map[string]interface{})
 	}*/
+	Config = config
+
 	fs.Config.LogLevel = fs.LogLevelInfo
 	if Config.RLogLevel == "debug" {
 		fs.Config.LogLevel = fs.LogLevelDebug
@@ -142,6 +144,7 @@ func ReloadConfig() (bool, error) {
 	} else if Config.LogLevel == "error" {
 		level = logrus.ErrorLevel
 	}
+
 	logrus.SetLevel(level)
 	log.Printf("Set log level to %s", level)
 	return true, nil

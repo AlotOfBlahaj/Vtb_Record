@@ -12,6 +12,7 @@ import (
 	"golang.org/x/time/rate"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 )
@@ -101,23 +102,45 @@ func (p *ProcessVideo) startDownloadVideo() {
 	logger := p.getLogger()
 	dirpath := p.LiveStatus.Video.UsersConfig.DownloadDir
 
-	var failRecord []time.Time
-	for {
-		ctx := p.Monitor.GetCtx()
-		proxy, _ := ctx.GetProxy()
-		down := downloader.GetDownloader(p.Monitor.DownloadProvider())
-		filePath := utils.GenerateFilepath(dirpath, p.LiveStatus.Video.Title+".ts")
-		cookie := ""
-		header := p.Monitor.GetCtx().GetHeaders()
-		if header != nil {
-			cookie = header["Cookie"]
-		}
-		aFilePath := down.DownloadVideo(p.LiveStatus.Video, proxy, cookie, filePath)
-		if aFilePath != "" {
-			p.videoPathList = append(p.videoPathList, aFilePath)
-		} else {
-			failRecord = append(failRecord, time.Now())
-			logger.Info("Failed to record, trying to refresh live state!")
+	func() {
+		defer func() {
+			panicMsg := recover()
+			if panicMsg == nil {
+				return
+			}
+			if panicMsg == "forceabort" {
+				logger.Warn("Downloader requested to abort! Waiting live to finish")
+				time.AfterFunc(2*time.Second, func() { // trigger a refresh now
+					defer func() {
+						recover()
+					}()
+					p.triggerChan <- 1 // refresh at once
+				})
+				for {
+					time.Sleep(time.Millisecond * 3000)
+					if p.needStop {
+						break
+					}
+				}
+			} else {
+				fmt.Println("panic: ", panicMsg)
+				debug.PrintStack()
+				panic(panicMsg) // rethrow
+			}
+		}()
+
+		var failRecord []time.Time
+		for {
+			ctx := p.Monitor.GetCtx()
+			proxy, _ := ctx.GetProxy()
+			down := downloader.GetDownloader(p.Monitor.DownloadProvider())
+			filePath := utils.GenerateFilepath(dirpath, p.LiveStatus.Video.Title+".ts")
+			cookie := ""
+			header := p.Monitor.GetCtx().GetHeaders()
+			if header != nil {
+				cookie = header["Cookie"]
+			}
+			aFilePath := down.DownloadVideo(p.LiveStatus.Video, proxy, cookie, filePath)
 
 			func() {
 				defer func() {
@@ -126,23 +149,30 @@ func (p *ProcessVideo) startDownloadVideo() {
 				p.triggerChan <- 1 // refresh at once
 			}()
 
-			if len(failRecord) >= 3 {
-				if time.Now().Unix()-failRecord[0].Unix() < 30 {
-					logger.Info("Waiting for next refresh before we retry")
-					//failRecord = make([]time.Time, 0)
-					//time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
-					failRecord = failRecord[1:]
-					time.Sleep(5 * time.Second) // be patient
-				} else {
-					failRecord = failRecord[1:]
+			if aFilePath != "" {
+				p.videoPathList = append(p.videoPathList, aFilePath)
+			} else {
+				failRecord = append(failRecord, time.Now())
+				logger.Info("Failed to record, trying to refresh live state!")
+
+				if len(failRecord) >= 3 {
+					if time.Now().Unix()-failRecord[0].Unix() < 30 {
+						logger.Info("Waiting for next refresh before we retry")
+						//failRecord = make([]time.Time, 0)
+						//time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
+						failRecord = failRecord[1:]
+						time.Sleep(5 * time.Second) // be patient
+					} else {
+						failRecord = failRecord[1:]
+					}
 				}
 			}
+			time.Sleep(time.Millisecond * 100)
+			if p.needStop {
+				break
+			}
 		}
-		time.Sleep(time.Millisecond * 100)
-		if p.needStop {
-			break
-		}
-	}
+	}()
 
 	logger.Info("Do postprocessing...")
 	videoName := p.postProcessing()
@@ -191,8 +221,11 @@ func (p *ProcessVideo) appendTitleHistory(title string) {
 func (p *ProcessVideo) isNewLive() bool {
 	newLiveStatus := p.LiveTrace(p.Monitor)
 	logger := p.getLogger()
-	if newLiveStatus.IsLive == false || p.LiveStatus.IsLive == false || (p.LiveStatus.IsLive == true && p.LiveStatus.Video.StreamingLink != newLiveStatus.Video.StreamingLink) {
-		logger.Infof("[isNewLive] is new live or offline")
+	if newLiveStatus.IsLive == false || p.LiveStatus.IsLive == false {
+		logger.Infof("[isNewLive] live offline")
+		return true
+	} else if p.LiveStatus.IsLive == true && p.LiveStatus.Video.Target != newLiveStatus.Video.Target {
+		logger.Infof("[isNewLive] is new live")
 		return true
 	} else {
 		if len(p.TitleHistory) == 0 || p.LiveStatus.Video.Title != newLiveStatus.Video.Title {
@@ -236,13 +269,13 @@ func (p *ProcessVideo) postProcessing() string {
 	} else {
 		dirpath += "/"
 		dirpath += p.getFullTitle()
-		logger.Infof("Renaming %s to %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		//err := os.Rename(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		err = utils.MoveFiles(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		if err != nil {
 			logger.Warn("Failed to rename from [%s] to [%s]! err: %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath, err)
 			return ""
 		}
+		logger.Infof("Renamed %s to %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		return dirpath
 	}
 }

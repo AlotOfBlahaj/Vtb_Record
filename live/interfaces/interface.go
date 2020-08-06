@@ -31,13 +31,13 @@ func init() {
 }
 
 type VideoInfo struct {
-	Title           string
-	Date            string
-	Target          string
-	Provider        string
-	FileName        string
-	FilePath        string
-	StreamingLink   string
+	Title    string
+	Date     string
+	Target   string
+	Provider string
+	FileName string
+	FilePath string
+	//Target          string
 	UsersConfig     config.UsersConfig
 	TransRecordPath string
 }

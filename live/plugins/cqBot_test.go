@@ -18,7 +18,6 @@ func TestPluginCQBot_LiveStart(t *testing.T) {
 				Provider:        "",
 				FileName:        "",
 				FilePath:        "",
-				StreamingLink:   "",
 				UsersConfig:     config.Config.Module[0].Users[0],
 				TransRecordPath: "",
 			},

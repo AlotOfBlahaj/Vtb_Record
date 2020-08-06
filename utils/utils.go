@@ -42,7 +42,7 @@ func HttpGetBuffer(client *http.Client, url string, header map[string]string, bu
 		client = &http.Client{}
 	}
 	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101 Firefox/60.0")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.8")
 	for k, v := range header {
 		req.Header.Set(k, v)
@@ -188,4 +188,24 @@ func RPartition(s string, sep string) (string, string, string) {
 
 func RandChooseStr(arr []string) string {
 	return arr[rand.Intn(len(arr))]
+}
+
+func GenRandBuf(p []byte) (n int, err error) {
+	r := rand.NewSource(time.Now().Unix())
+	todo := len(p)
+	offset := 0
+	for {
+		val := int64(r.Int63())
+		for i := 0; i < 8; i++ {
+			p[offset] = byte(val & 0xff)
+			todo--
+			if todo == 0 {
+				return len(p), nil
+			}
+			offset++
+			val >>= 8
+		}
+	}
+
+	panic("unreachable")
 }

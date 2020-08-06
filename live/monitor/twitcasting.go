@@ -35,7 +35,7 @@ func (t *Twitcasting) getVideoInfo() error {
 		return err
 	}
 	if strings.Contains(string(ret), "password") {
-		log.Warn("TwitCasting has password! ignoring...")
+		log.WithField("TargetId", t.TargetId).Warn("TwitCasting has password! ignoring...")
 		t.IsLive = false
 	}
 	return nil
@@ -44,12 +44,11 @@ func (t *Twitcasting) getVideoInfo() error {
 func (t *Twitcasting) CreateVideo(usersConfig config.UsersConfig) *interfaces.VideoInfo {
 	videoTitle := t.TargetId + "#" + t.Vid
 	v := &interfaces.VideoInfo{
-		Title:         videoTitle,
-		Date:          GetTimeNow(),
-		Target:        t.StreamingLink,
-		Provider:      "Twitcasting",
-		StreamingLink: t.StreamingLink,
-		UsersConfig:   usersConfig,
+		Title:       videoTitle,
+		Date:        GetTimeNow(),
+		Target:      t.StreamingLink,
+		Provider:    "Twitcasting",
+		UsersConfig: usersConfig,
 	}
 	return v
 }
