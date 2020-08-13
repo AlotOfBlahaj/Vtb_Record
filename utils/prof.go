@@ -49,7 +49,7 @@ func InitProfiling() {
 				if err != nil {
 					log.Warnf("Failed to reuse-listen addr: %s", err)
 				}
-				PprofServer := &http.Server{}
+				PprofServer = &http.Server{}
 				//go PprofServer.ListenAndServe()
 				go PprofServer.Serve(listener)
 			}

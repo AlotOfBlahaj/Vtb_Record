@@ -174,8 +174,11 @@ func arrangeTask() {
 			break
 		}
 		log.Infof("Waiting to finish: current living %s", living)
+		time.Sleep(time.Second * 5)
 	}
-	log.Infof("All tasks finished! Exiting now~")
+	log.Infof("All tasks finished! Wait an additional time to ensure everything's saved")
+	time.Sleep(time.Second * 60)
+	log.Infof("Everything finished, exiting now~~")
 }
 
 func handleInterrupt() {
