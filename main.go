@@ -9,7 +9,6 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"github.com/orandin/lumberjackrus"
 	"github.com/rclone/rclone/fs"
 	rconfig "github.com/rclone/rclone/fs/config"
 	"github.com/rclone/rclone/fs/operations"
@@ -22,51 +21,11 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"path"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 )
-
-// Can't be func init as we need the parsed config
-func initLog() {
-	log.Printf("Init logging!")
-	log.SetReportCaller(true)
-	// Log as JSON instead of the default ASCII formatter.
-	log.SetFormatter(&log.TextFormatter{
-		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
-			filename := path.Base(f.File)
-			_, _, shortfname := utils.RPartition(f.Function, ".")
-			return fmt.Sprintf("%s()", shortfname), fmt.Sprintf("%s:%d", filename, f.Line)
-		},
-	},
-	)
-	hook, err := lumberjackrus.NewHook(
-		&lumberjackrus.LogFile{
-			Filename:   config.Config.LogFile,
-			MaxSize:    config.Config.LogFileSize,
-			MaxBackups: 1,
-			MaxAge:     1,
-			Compress:   false,
-			LocalTime:  false,
-		},
-		log.DebugLevel,
-		&log.JSONFormatter{},
-		nil,
-	)
-
-	if err != nil {
-		panic(fmt.Errorf("NewHook Error: %s", err))
-	}
-
-	log.AddHook(hook)
-
-	fs.LogPrint = func(level fs.LogLevel, text string) {
-		log.WithField("src", "rclone").Infof(fmt.Sprintf("%-6s: %s", level, text))
-	}
-}
 
 var SafeStop bool
 
@@ -314,7 +273,7 @@ func main() {
 	flag.Parse()
 	viper.SetConfigFile(*confPath)
 	config.InitConfig()
-	initLog()
+	utils.InitLog()
 	go utils.InitProfiling()
 	arrangeTask()
 }

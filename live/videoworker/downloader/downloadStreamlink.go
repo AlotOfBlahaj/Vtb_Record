@@ -75,7 +75,7 @@ func (d *StreamlinkDownload) doDownload() error {
 	go func() {
 		_, errStdout := io.Copy(out, stdoutIn)
 		if errStdout != nil {
-			d.Logger.Warn("Error during writing streamlink video: %s", errStdout)
+			d.Logger.WithError(errStdout).Warn("Error during writing streamlink video")
 		}
 		errChan <- errStdout
 	}()

@@ -165,18 +165,18 @@ func (b *BilibiliPoller) StartPoll() error {
 	if err != nil {
 		return err
 	}
-	biliMod := getMod("Bilibili")
-	_interval, ok := biliMod.ExtraConfig["PollInterval"]
-	interval := time.Duration(config.Config.CriticalCheckSec) * time.Second
-	if ok {
-		interval = time.Duration(_interval.(float64)) * time.Second
-	}
 	go func() {
 		for {
+			biliMod := getMod("Bilibili")
+			_interval, ok := biliMod.ExtraConfig["PollInterval"]
+			interval := time.Duration(config.Config.CriticalCheckSec) * time.Second
+			if ok {
+				interval = time.Duration(_interval.(float64)) * time.Second
+			}
 			time.Sleep(interval)
 			err := b.GetStatus()
 			if err != nil {
-				log.Warnf("Error during polling GetStatus: %s", err)
+				log.WithError(err).Warnf("Error during polling GetStatus")
 			}
 		}
 	}()
@@ -188,7 +188,7 @@ func (b *BilibiliPoller) IsLiving(uid int) *LiveInfo {
 	if b.LivingUids == nil {
 		err := b.StartPoll()
 		if err != nil {
-			log.Warnf("Failed to poll from bilibili: %s", err)
+			log.WithError(err).Warnf("Failed to poll from bilibili")
 		}
 	}
 	b.lock.Unlock()
@@ -261,7 +261,7 @@ func (b *Bilibili) CheckLive(usersConfig config.UsersConfig) bool {
 
 	if err != nil {
 		b.isLive = false
-		log.WithField("user", usersConfig.TargetId).Errorf("GetVideoInfo error: %s", err)
+		log.WithField("user", fmt.Sprintf("%s|%s", "Bilibili", usersConfig.Name)).WithError(err).Errorf("GetVideoInfo error")
 	}
 	if !b.isLive {
 		NoLiving("Bilibili", usersConfig.Name)

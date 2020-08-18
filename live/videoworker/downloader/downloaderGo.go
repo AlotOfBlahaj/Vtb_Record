@@ -203,7 +203,7 @@ func (d *HLSDownloader) _handleSegment(segData *HLSSegment, isAlt bool) bool {
 		//newbuf := bytes.NewBuffer(buf)
 		//var err error
 		if err != nil {
-			logger.Infof("Err when download segment %s: %s", segData.Url, err)
+			logger.WithError(err).Infof("Err when download segment %s", segData.Url)
 			if strings.HasSuffix(err.Error(), "404") {
 				func() {
 					defer func() {
@@ -432,7 +432,7 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 		if isAlt {
 			url = d.AltHLSUrl
 		}
-		logger.Warnf("Too many err occured downloading %s: %s, refreshing m3u8url...", url, errs)
+		logger.WithField("errors", errs).Warnf("Too many err occured downloading %s, refreshing m3u8url...", url)
 		d.forceRefresh(isAlt)
 		//time.Sleep(5 * time.Second)
 	}
@@ -476,13 +476,15 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 
 	parsedurl, err := url.Parse(curUrl)
 	if err != nil {
-		logger.Warnf("m3u8 url parse fail: %s", err)
+		logger.WithError(err).Warnf("m3u8 url parse fail")
 		d.forceRefresh(isAlt)
 		//time.Sleep(10 * time.Second)
 		return nil
 	}
 
-	curUrl, _ = d.M3U8UrlRewriter.rewrite(curUrl)
+	curUrl, useMain, useAlt := d.M3U8UrlRewriter.rewrite(curUrl)
+
+	//finished := false
 
 	//var errMu sync.Mutex
 	//errList := make([]error, 0, 10)
@@ -493,6 +495,9 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 		}
 		_m3u8, err = utils.HttpGet(client, curUrl, curHeader)
 		if err != nil {
+			d.M3U8UrlRewriter.callback(curUrl, err)
+			logger.WithError(err).Debugf("Download m3u8 failed")
+
 			if strings.HasSuffix(err.Error(), "404") {
 				func() {
 					defer func() {
@@ -504,9 +509,8 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 					}
 					ch <- nil // abort!
 				}()
+				return
 			}
-			d.M3U8UrlRewriter.callback(curUrl, err)
-			logger.Debugf("Download m3u8 failed with %s", err)
 			/*errMu.Lock()
 			errList = append(errList, err)
 			errMu.Unlock()*/
@@ -538,9 +542,25 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 		}
 	}
 
-	clients := d.allClients
+	//clients := d.allClients
+	clients := []*http.Client{}
+	if useMain == 0 {
+		clients = append(clients, d.AltClients...)
+	} else if useAlt == 0 {
+		clients = append(clients, d.Clients...)
+	} else {
+		if useAlt > useMain {
+			clients = append(clients, d.AltClients...)
+			clients = append(clients, d.Clients...)
+		} else {
+			clients = d.allClients
+		}
+	}
+	if len(clients) == 0 {
+		clients = d.allClients
+	}
 	// for gotcha105 & gotcha104, never use altproxy when downloading
-	if strings.Contains(curUrl, "gotcha105") {
+	/*if strings.Contains(curUrl, "gotcha105") {
 		clients = d.Clients
 	} else if strings.Contains(curUrl, "baidubce") {
 		clients = d.Clients
@@ -548,7 +568,7 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 		clients = []*http.Client{}
 		clients = append(clients, d.AltClients...)
 		clients = append(clients, d.Clients...)
-	}
+	}*/
 
 breakout:
 	for i, client := range clients {
@@ -562,6 +582,11 @@ breakout:
 				return fmt.Errorf("Unrecoverable m3u8 download err, aborting, url: %s", curUrl)
 			}
 			_m3u8 = ret
+			if !isAlt {
+				d.downloadErr.Flush()
+			} else {
+				d.altdownloadErr.Flush()
+			}
 			break breakout
 		case <-time.After(time.Millisecond * 2500): // failed to download within timeout, issue another req
 			logger.Debugf("Download m3u8 %s timeout with client %d", curUrl, i)
@@ -604,7 +629,7 @@ func (d *HLSDownloader) AltDownloader() {
 	for {
 		err := d.m3u8Handler(true)
 		if err != nil {
-			d.Logger.Infof("Alt m3u8 download failed, err: %s", err)
+			d.Logger.WithError(err).Infof("Alt m3u8 download failed")
 		}
 		if d.AltStopped {
 			break
@@ -661,16 +686,16 @@ func (d *HLSDownloader) Worker() {
 			alt := d.AltAsMain
 			needAbort, err, infoJson := updateInfo(d.Video, "", d.Cookie, alt)
 			if needAbort {
-				d.Logger.Warnf("Streamlink requests to abort, worker finishing...: %s", err)
+				d.Logger.WithError(err).Warnf("Streamlink requests to abort, worker finishing...")
 				return
 			}
 			if err != nil {
-				d.Logger.Warnf("Failed to update playlist: %s", err)
+				d.Logger.WithError(err).Warnf("Failed to update playlist")
 				continue
 			}
 			m3u8url, headers, err := parseHttpJson(infoJson)
 			if err != nil {
-				d.Logger.Warnf("Failed to parse json ret: %s", err)
+				d.Logger.WithError(err).Warnf("Failed to parse json ret")
 				continue
 			}
 
@@ -749,7 +774,7 @@ func (d *HLSDownloader) AltWorker() {
 			}
 			needAbort, err, infoJson := updateInfo(d.Video, "", d.Cookie, true)
 			if needAbort {
-				logger.Warnf("Alt streamlink requested to abort, err: %s", err)
+				logger.WithError(err).Warnf("Alt streamlink requested to abort")
 				for {
 					if d.AltStopped {
 						return
@@ -763,7 +788,7 @@ func (d *HLSDownloader) AltWorker() {
 			}
 			m3u8url, headers, err := parseHttpJson(infoJson)
 			if err != nil {
-				logger.Warnf("Failed to parse json ret: %s, rawData: %s", err, infoJson)
+				logger.WithError(err).Warnf("Failed to parse json, rawData: %s", infoJson)
 				continue
 			}
 
@@ -1269,7 +1294,7 @@ func updateInfo(video *interfaces.VideoInfo, proxy string, cookie string, isAlt 
 	if slErr != "" {
 		err = fmt.Errorf("Streamlink error: " + slErr)
 		if strings.Contains(stderr, "(abort)") {
-			log.Warnf("streamlink requested abort")
+			log.WithField("video", video).WithError(err).Warnf("streamlink requested abort")
 			needAbort = true
 		}
 		return

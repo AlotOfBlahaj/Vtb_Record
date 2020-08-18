@@ -68,7 +68,7 @@ func (p *ProcessVideo) StartProcessVideo() {
 	go p.keepLiveAlive()
 	if p.isNeedDownload() {
 		if err := p.prepareDownload(); err != nil {
-			log.Warnf("Failed to prepare download, err: %s", err)
+			p.getLogger().WithError(err).Warnf("Failed to prepare download")
 			p.finish <- -1
 		} else {
 			go p.Plugins.OnDownloadStart(p)
@@ -89,7 +89,7 @@ func (p *ProcessVideo) prepareDownload() error {
 	}
 	dirpath := strings.Join(pathSlice, "/")
 	ret, err := utils.MakeDir(dirpath)
-	log.Debugf("Made directory: %s, ret: %s, err: %s", dirpath, ret, err)
+	p.getLogger().Debugf("Made directory: %s, ret: %s, err: %s", dirpath, ret, err)
 	if err != nil {
 		return err
 	}
@@ -272,9 +272,13 @@ func (p *ProcessVideo) postProcessing() string {
 		//err := os.Rename(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		err = utils.MoveFiles(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		if err != nil {
-			logger.Warn("Failed to rename from [%s] to [%s]! err: %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath, err)
+			logger.WithError(err).Warn("Failed to rename from [%s] to [%s]!", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 			return ""
 		}
+		srcdir := p.LiveStatus.Video.UsersConfig.DownloadDir
+		time.AfterFunc(time.Second*200, func() {
+			utils.MoveFiles(srcdir, dirpath)
+		})
 		logger.Infof("Renamed %s to %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
 		return dirpath
 	}

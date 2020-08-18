@@ -3,7 +3,7 @@ package downloader
 import "strings"
 
 type URLRewriter interface {
-	rewrite(url string) (newUrl string, onlyAlt bool)
+	rewrite(url string) (newUrl string, useMain, useAlt int)
 	callback(url string, err error)
 }
 
@@ -11,13 +11,26 @@ type BilibiliRewriter struct {
 	needTxyunRewrite bool
 }
 
-func (u *BilibiliRewriter) rewrite(url string) (newUrl string, onlyAlt bool) {
-	onlyAlt = false
+func (u *BilibiliRewriter) rewrite(url string) (newUrl string, useMain, useAlt int) {
+	//onlyAlt = false
+	useMain = 1
+	useAlt = 1
 	newUrl = url
-	if u.needTxyunRewrite {
-		if strings.Contains(url, "gotcha104") {
-			newUrl = strings.Replace(url, "d1--cn-gotcha104.bilivideo.com", "3hq4yf8r2xgz9.cfc-execute.su.baidubce.com", 1)
+	if strings.Contains(url, "gotcha105") {
+		useAlt = 0
+	} else if strings.Contains(url, "gotcha104") {
+		if u.needTxyunRewrite {
+			newUrl = strings.Replace(url, "https://d1--cn-gotcha104.bilivideo.com", "https://3hq4yf8r2xgz9.cfc-execute.su.baidubce.com", 1)
+			newUrl = strings.Replace(newUrl, "http://d1--cn-gotcha104.bilivideo.com", "https://3hq4yf8r2xgz9.cfc-execute.su.baidubce.com", 1)
+			useMain = 1
+			useAlt = 0
+		} else {
+			useMain = 0
+			useAlt = 1
 		}
+	} else if strings.Contains(url, "baidubce") {
+		useAlt = 2
+		useMain = 1
 	}
 	return
 }
@@ -34,10 +47,10 @@ type RewriterWrap struct {
 	Rewriters []URLRewriter
 }
 
-func (u *RewriterWrap) rewrite(url string) (newUrl string, onlyAlt bool) {
+func (u *RewriterWrap) rewrite(url string) (newUrl string, useMain, useAlt int) {
 	for _, rewriter := range u.Rewriters {
-		newUrl, onlyAlt = rewriter.rewrite(url)
-		if newUrl != url || onlyAlt {
+		newUrl, useMain, useAlt = rewriter.rewrite(url)
+		if newUrl != url || useMain != 1 || useAlt != 1 {
 			break
 		}
 	}

@@ -80,7 +80,7 @@ func HttpGetBuffer(client *http.Client, url string, header map[string]string, bu
 			return nil, err
 		}
 		if n != res.ContentLength {
-			log.Warnf("Got unexpected payload: expected: %v, got %v", res.ContentLength, n)
+			return nil, fmt.Errorf("Got unexpected payload: expected: %v, got %v", res.ContentLength, n)
 		}
 		//htmlBody = buf.Bytes()
 	} else {
