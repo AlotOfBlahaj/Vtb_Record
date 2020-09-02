@@ -34,28 +34,8 @@ type BilibiliPoller struct {
 
 var Poller BilibiliPoller
 
-func getBilibiliMod() *config.ModuleConfig {
-	for _, m := range config.Config.Module {
-		if m.Name == "Bilibili" {
-			return &m
-		}
-	}
-	return nil
-}
-
-func getBilibiliCtx() *MonitorCtx {
-	var ctx *MonitorCtx
-	ret := getBilibiliMod()
-	if ret == nil {
-		return nil
-	}
-	_ctx := createMonitorCtx(*ret)
-	ctx = &_ctx
-	return ctx
-}
-
 func (b *BilibiliPoller) getStatusUseFollow() error {
-	ctx := getBilibiliCtx()
+	ctx := getCtx("Bilibili")
 	if ctx == nil {
 		return nil
 	}
@@ -128,12 +108,12 @@ func (b *BilibiliPoller) getStatusUseFollow() error {
 			user := _user.(map[string]interface{})
 			b.LivingUids[user["uid"].(int)] = user["link"].(string)
 	 	}*/
-	log.Debugf("Parsed uids: %s", b.LivingUids)
+	log.Debugf("Parsed uids: %v", b.LivingUids)
 	return nil
 }
 
 func (b *BilibiliPoller) getStatusUseBatch() error {
-	ctx := getBilibiliCtx()
+	ctx := getCtx("Bilibili")
 	_url, ok := ctx.ExtraModConfig["ApiHostUrl"]
 	var url string
 	if ok {
@@ -142,7 +122,7 @@ func (b *BilibiliPoller) getStatusUseBatch() error {
 		url = "https://api.live.bilibili.com"
 	}
 
-	biliMod := getBilibiliMod()
+	biliMod := getMod("Bilibili")
 	allUids := make([]string, 0)
 	for _, u := range biliMod.Users {
 		allUids = append(allUids, u.TargetId)
@@ -172,7 +152,7 @@ func (b *BilibiliPoller) getStatusUseBatch() error {
 		}
 	}
 	b.LivingUids = livingUids
-	log.Debugf("Parsed uids: %s", b.LivingUids)
+	log.Debugf("Parsed uids: %v", b.LivingUids)
 	return nil
 }
 
@@ -185,7 +165,7 @@ func (b *BilibiliPoller) StartPoll() error {
 	if err != nil {
 		return err
 	}
-	biliMod := getBilibiliMod()
+	biliMod := getMod("Bilibili")
 	_interval, ok := biliMod.ExtraConfig["PollInterval"]
 	interval := time.Duration(config.Config.CriticalCheckSec) * time.Second
 	if ok {
@@ -260,12 +240,11 @@ func (b *Bilibili) getVideoInfoByRoom() error {
 
 func (b *Bilibili) CreateVideo(usersConfig config.UsersConfig) *interfaces.VideoInfo {
 	v := &interfaces.VideoInfo{
-		Title:         b.Title,
-		Date:          GetTimeNow(),
-		Target:        b.streamingLink,
-		Provider:      "Bilibili",
-		StreamingLink: "",
-		UsersConfig:   usersConfig,
+		Title:       b.Title,
+		Date:        GetTimeNow(),
+		Target:      b.streamingLink,
+		Provider:    "Bilibili",
+		UsersConfig: usersConfig,
 	}
 	return v
 }

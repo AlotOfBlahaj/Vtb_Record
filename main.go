@@ -1,26 +1,32 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"github.com/lucas-clemente/quic-go"
-	"github.com/lucas-clemente/quic-go/http3"
 	"github.com/orandin/lumberjackrus"
 	"github.com/rclone/rclone/fs"
 	rconfig "github.com/rclone/rclone/fs/config"
+	"github.com/rclone/rclone/fs/operations"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"io"
 	"math/rand"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
 	"path"
 	"runtime"
-	"runtime/debug"
+	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -62,6 +68,8 @@ func initLog() {
 	}
 }
 
+var SafeStop bool
+
 func arrangeTask() {
 	log.Printf("Arrange tasks...")
 	status := make([]map[string]bool, len(config.Config.Module))
@@ -85,6 +93,7 @@ func arrangeTask() {
 					}
 				}*/
 				if allDone {
+					time.Sleep(4 * time.Second) // wait to ensure the config is fully written
 					rconfig.LoadConfig()
 					ret, err := config.ReloadConfig()
 					if ret {
@@ -106,32 +115,36 @@ func arrangeTask() {
 		utils.MakeDir(dir)
 	}
 
-	defer func() {
+	/*defer func() {
 		panic("arrangeTask goes out!!!")
-	}()
+	}()*/
 
 	var statusMx sync.Mutex
 	for {
+		var mods []config.ModuleConfig
 		living := make([]string, 0, 128)
 		changed := make([]string, 0, 128)
-		for mod_i, module := range config.Config.Module {
+		mods = make([]config.ModuleConfig, len(config.Config.Module))
+		copy(mods, config.Config.Module)
+		for mod_i, module := range mods {
 			if module.Enable {
 				for _, usersConfig := range module.Users {
+					identifier := fmt.Sprintf("\"%s-%s\"", usersConfig.Name, usersConfig.TargetId)
 					statusMx.Lock()
-					if status[mod_i][usersConfig.Name] != false {
+					if status[mod_i][identifier] != false {
 						living = append(living, fmt.Sprintf("\"%s-%s\"", usersConfig.Name, usersConfig.TargetId))
 						statusMx.Unlock()
 						continue
 					}
-					status[mod_i][usersConfig.Name] = true
+					status[mod_i][identifier] = true
 					statusMx.Unlock()
-					changed = append(changed, usersConfig.Name)
+					changed = append(changed, identifier)
 					go func(i int, j string, mon monitor.VideoMonitor, userCon config.UsersConfig) {
 						live.StartMonitor(mon, userCon)
 						statusMx.Lock()
 						status[i][j] = false
 						statusMx.Unlock()
-					}(mod_i, usersConfig.Name, monitor.CreateVideoMonitor(module), usersConfig)
+					}(mod_i, identifier, monitor.CreateVideoMonitor(module), usersConfig)
 					time.Sleep(time.Millisecond * 20)
 				}
 			}
@@ -142,87 +155,166 @@ func arrangeTask() {
 			time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
 		}
 		time.Sleep(time.Duration(config.Config.NormalCheckSec) * time.Second)
+		if SafeStop {
+			break
+		}
 	}
-}
-
-func bToMb(b uint64) uint64 {
-	return b / 1024 / 1024
-}
-
-func PrintMemUsage() {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
-	log.Warnf("Alloc = %v MiB\tTotalAlloc = %v MiB\tSys = %v MiB\tGoroutines = %v\tNumGC = %v",
-		bToMb(m.Alloc),
-		bToMb(m.TotalAlloc),
-		bToMb(m.Sys),
-		runtime.NumGoroutine(),
-		m.NumGC)
-}
-
-func printMem() {
-	log.Warnf("Starting pprof server")
-	//go http.ListenAndServe("0.0.0.0:49314", nil)
-	go http.ListenAndServe(config.Config.PprofHost, nil)
-
-	go func() {
-		ticker := time.NewTicker(time.Minute * 1)
-		for {
-			PrintMemUsage()
-			<-ticker.C
-		}
-	}()
-
-	go func() {
-		ticker := time.NewTicker(time.Millisecond * 600)
-		for {
-			//start := time.Now()
-			runtime.GC()
-			//log.Debugf("GC & scvg use %s", time.Now().Sub(start))
-			<-ticker.C
-		}
-	}()
-
-	ticker := time.NewTicker(time.Second * 5)
 	for {
-		start := time.Now()
-		debug.FreeOSMemory()
-		log.Debugf("scvg use %s", time.Now().Sub(start))
-		<-ticker.C
+		living := make([]string, 0, 128)
+		statusMx.Lock()
+		for _, mod := range status {
+			for name, val := range mod {
+				if val {
+					living = append(living, name)
+				}
+			}
+		}
+		statusMx.Unlock()
+		if len(living) == 0 {
+			break
+		}
+		log.Infof("Waiting to finish: current living %s", living)
+		time.Sleep(time.Second * 5)
 	}
+	log.Infof("All tasks finished! Wait an additional time to ensure everything's saved")
+	time.Sleep(time.Second * 60)
+	log.Infof("Everything finished, exiting now~~")
+}
+
+func handleInterrupt() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		log.Warnf("Ctrl+C pressed in Terminal!")
+		operations.RcatFiles.Range(func(key, value interface{}) bool {
+			fn := key.(string)
+			log.Infof("Closing opened file: %s", fn)
+			in := value.(io.ReadCloser)
+			in.Close()
+			return true
+		})
+		time.Sleep(8 * time.Second) // wait rclone upload finish..
+		os.Exit(0)
+	}()
+}
+
+func handleUpdate() {
+	c := make(chan os.Signal)
+	SIGUSR1 := syscall.Signal(10)
+	signal.Notify(c, SIGUSR1)
+	go func() {
+		<-c
+		log.Warnf("Received update signal! Waiting everything done!")
+		SafeStop = true
+	}()
 }
 
 func main() {
+	handleInterrupt()
+	handleUpdate()
+	fs.Config.StreamingUploadCutoff = fs.SizeSuffix(0)
+	fs.Config.IgnoreChecksum = true
+	fs.Config.NoGzip = true
 	rand.Seed(time.Now().UnixNano())
-	if true {
+	fs.Config.UserAgent = "google-api-go-client/0.5"
+
+	http.DefaultTransport = &http.Transport{
+		DisableKeepAlives:  true, // disable keep alive to avoid connection reset
+		DisableCompression: true,
+		IdleConnTimeout:    time.Second * 10,
+		ForceAttemptHTTP2:  false,
+		DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, err error) {
+			if addr == "www.googleapis.com:443" {
+				//addr = "216.58.198.206:443"
+				addrs := []string{"private.googleapis.com:443", "www.googleapis.com:443"}
+				addr = addrs[rand.Intn(len(addrs))]
+			}
+			return net.Dial(network, addr)
+		},
+	}
+
+	if false {
+		dialer := &net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}
+		addrReplace := func(addr string) string {
+			if addr == "www.googleapis.com:443" {
+				//addr = "216.58.198.206:443"
+				addrs := []string{"private.googleapis.com:443", "10.224.1.3:19999", "10.224.1.3:19999"}
+				//addrs := []string{"10.224.1.3:19999"}
+				addr = addrs[rand.Intn(len(addrs))]
+			}
+			return addr
+		}
+		dialTls :=
+			func(network, addr string) (conn net.Conn, err error) {
+				addr = addrReplace(addr)
+				if !strings.HasSuffix(addr, ":443") {
+					return dialer.Dial(network, addr)
+				}
+				c, err := tls.Dial(network, addr, &tls.Config{InsecureSkipVerify: true})
+				if err != nil {
+					//log.Println("DialTls Err:", err)
+					return nil, err
+				}
+				//log.Println("doing handshake")
+				err = c.Handshake()
+				if err != nil {
+					return c, err
+				}
+				//log.Println(c.RemoteAddr())
+				return c, c.Handshake()
+			}
+		//dialTls := nil
 		http.DefaultTransport = &http.Transport{
 			DisableKeepAlives:  true, // disable keep alive to avoid connection reset
-			DisableCompression: false,
+			DisableCompression: true,
+			IdleConnTimeout:    time.Second * 10,
+			ForceAttemptHTTP2:  false,
+			DialTLS:            dialTls,
+			//DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, err error) {
+			/*ipaddr := "10.168.1." + strconv.Itoa(100 + rand.Intn(20))
+			netaddr, _ := net.ResolveIPAddr("ip", ipaddr)
+			return (&net.Dialer{
+				LocalAddr: &net.TCPAddr{
+					IP: netaddr.IP,
+				},
+				Timeout:   8 * time.Second,
+			}).DialContext(ctx, network, addr)*/
+			/*if addr == "www.googleapis.com:443" {
+				//addr = "216.58.198.206:443"
+				addrs := []string{"private.googleapis.com", "www.googleapis.com:443"}
+				rand.Intn(len(addrs))
+				addr = "216.58.198.206:443"
+			}
+			return dialer.DialContext(ctx, network, addr)*/
+			//},
 			//ForceAttemptHTTP2:      true,
 		}
-	} else {
-		http.DefaultTransport = &http3.RoundTripper{
-			QuicConfig: &quic.Config{
-				MaxIdleTimeout:        time.Second * 20,
-				MaxIncomingStreams:    0,
-				MaxIncomingUniStreams: 0,
-				StatelessResetKey:     nil,
-				KeepAlive:             false,
-			},
-		}
 	}
+	/*http.DefaultTransport = &http3.RoundTripper{
+		QuicConfig: &quic.Config{
+			MaxIdleTimeout:        time.Second * 20,
+			MaxIncomingStreams:    0,
+			MaxIncomingUniStreams: 0,
+			StatelessResetKey:     nil,
+			KeepAlive:             false,
+		},
+	}*/
 	http.DefaultClient.Transport = http.DefaultTransport
 	fs.Config.Transfers = 20
 	fs.Config.ConnectTimeout = time.Second * 2
 	fs.Config.Timeout = time.Second * 4
 	fs.Config.TPSLimit = 0
+	fs.Config.LowLevelRetries = 120
 	//fs.Config.NoGzip = false
 	confPath := flag.String("config", "config.json", "config.json location")
 	flag.Parse()
 	viper.SetConfigFile(*confPath)
 	config.InitConfig()
 	initLog()
-	go printMem()
+	go utils.InitProfiling()
 	arrangeTask()
 }
