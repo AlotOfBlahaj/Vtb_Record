@@ -52,7 +52,9 @@ func doDownloadHttp(entry *log.Entry, output string, url string, headers map[str
 	out := utils.GetWriter(output)
 	defer out.Close()
 
-	transport := &http.Transport{}
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 
 	client := &http.Client{
 		Transport: transport,
@@ -163,6 +165,8 @@ type HLSDownloader struct {
 
 	downloadErr    *cache.Cache
 	altdownloadErr *cache.Cache
+
+	altSegErr sync.Map
 }
 
 var bufPool bytebufferpool.Pool
@@ -173,8 +177,130 @@ func (d *HLSDownloader) handleSegment(segData *HLSSegment) bool {
 	return d._handleSegment(segData, false)
 }
 
-func (d *HLSDownloader) handleAltSegment(segData *HLSSegment) bool {
-	return d._handleSegment(segData, true)
+func (d *HLSDownloader) handleAltSegment(segData *HLSSegment) (bool, []error) {
+	d.segRl.Take()
+	if IsStub {
+		return true, nil
+	}
+
+	logger := d.Logger.WithField("alt", true)
+	downChan := make(chan *bytes.Buffer)
+	defer func() {
+		defer func() {
+			recover()
+		}()
+		close(downChan)
+	}()
+	ALT_TIMEOUT := 35 * time.Second
+
+	errs := []error{}
+	errMutex := sync.Mutex{}
+	doDownload := func(client *http.Client) {
+		//buf := bufPool.Get()
+		s := time.Now()
+		newbuf, err := utils.HttpGetBuffer(client, segData.Url, d.HLSHeader, nil)
+		//buf := make([]byte, 6 * 1024 * 1024)
+		//buf := make([]byte, 1)
+		//Read(buf)
+		//newbuf := bytes.NewBuffer(buf)
+		//var err error
+		if err != nil {
+			errMutex.Lock()
+			errs = append(errs, err)
+			errMutex.Unlock()
+			if strings.HasSuffix(err.Error(), "404") {
+				func() {
+					defer func() {
+						recover()
+					}()
+					ch := downChan
+					if ch == nil {
+						return
+					}
+					ch <- nil
+				}()
+			}
+			//bufPool.Put(buf)
+		} else {
+			usedTime := time.Now().Sub(s)
+			if usedTime > ALT_TIMEOUT {
+				logger.Infof("Download %d used %s", segData.SegNo, usedTime)
+			}
+			func() {
+				defer func() {
+					recover()
+				}()
+				ch := downChan
+				if ch == nil {
+					return
+				}
+				ch <- newbuf
+			}()
+		}
+	}
+	onlyAlt := false
+	// gotcha104 is tencent yun, only m3u8 blocked the foreign ip, so after that we simply ignore it
+	/*if strings.Contains(segData.Url, "gotcha104") {
+		onlyAlt = true
+	}*/
+	i := 0
+	clients := d.allClients
+	if onlyAlt {
+		clients = d.AltClients
+		if len(clients) == 0 {
+			clients = d.allClients
+		}
+	} else {
+		// TODO: Refactor this
+		if strings.Contains(segData.Url, "gotcha105") {
+			clients = make([]*http.Client, 0)
+			clients = append(clients, d.Clients...)
+			clients = append(clients, d.Clients...) // double same client
+		} else if strings.Contains(segData.Url, "gotcha104") {
+			clients = []*http.Client{}
+			clients = append(clients, d.Clients...)
+			clients = append(clients, d.AltClients...)
+		} else if strings.Contains(segData.Url, "googlevideo.com") {
+			clients = []*http.Client{}
+			clients = append(clients, d.Clients...)
+		}
+	}
+	round := 0
+breakout:
+	for {
+		i %= len(clients)
+		go doDownload(clients[i])
+		//go d.downloadWorker(d.allClients[i], segData.Url, downChan)
+		i += 1
+		select {
+		case ret := <-downChan:
+			close(downChan)
+			if ret == nil { // unrecoverable error, so return at once
+				errMutex.Lock()
+				reterr := make([]error, len(errs))
+				copy(reterr, errs)
+				errMutex.Unlock()
+				return false, reterr
+			}
+			segData.Data = ret
+			break breakout
+		case <-time.After(ALT_TIMEOUT):
+			// wait 10 second for each download try
+		}
+		if i == len(clients) {
+			//logger.Warnf("Failed all-clients to download segment %d", segData.SegNo)
+			round++
+		}
+		if round == 2 {
+			logger.Warnf("Failed to download alt segment %d after 2 round, giving up", segData.SegNo)
+			errMutex.Lock()
+			reterr := make([]error, len(errs))
+			copy(reterr, errs)
+			errMutex.Unlock()
+			return true, errs // true but not setting segment, so not got removed
+		}
+	}
+	return true, nil
 }
 
 // download each segment
@@ -193,6 +319,8 @@ func (d *HLSDownloader) _handleSegment(segData *HLSSegment, isAlt bool) bool {
 		}()
 		close(downChan)
 	}()
+	errs := []error{}
+	errMutex := sync.Mutex{}
 	doDownload := func(client *http.Client) {
 		//buf := bufPool.Get()
 		s := time.Now()
@@ -203,7 +331,13 @@ func (d *HLSDownloader) _handleSegment(segData *HLSSegment, isAlt bool) bool {
 		//newbuf := bytes.NewBuffer(buf)
 		//var err error
 		if err != nil {
-			logger.WithError(err).Infof("Err when download segment %s", segData.Url)
+			if isAlt {
+				errMutex.Lock()
+				errs = append(errs, err)
+				errMutex.Unlock()
+			} else {
+				logger.WithError(err).Infof("Err when download segment %s", segData.Url)
+			}
 			if strings.HasSuffix(err.Error(), "404") {
 				func() {
 					defer func() {
@@ -285,7 +419,7 @@ breakout:
 		}
 		if isAlt {
 			if round == 2 {
-				logger.Warnf("Failed to download alt segment %d after 2 round, giving up")
+				logger.WithField("errors", errs).Warnf("Failed to download alt segment %d after 2 round, giving up")
 				return true // true but not setting segment, so not got removed
 			}
 		}
@@ -345,13 +479,13 @@ func (d *HLSDownloader) m3u8Parser(logger *log.Entry, parsedurl *url.URL, m3u8 s
 			segs = append(segs, m3u8lines[i+1])
 			i += 1
 		} else if strings.HasPrefix(line, "#EXT-X-ENDLIST") {
-			logger.Debug("Got HLS end mark!")
+			logger.Trace("Got HLS end mark!")
 			finished = true
 		} else if line == "" || strings.HasPrefix(line, "#EXT-X-VERSION") ||
 			strings.HasPrefix(line, "#EXT-X-ALLOW-CACHE") ||
 			strings.HasPrefix(line, "#EXT-X-TARGETDURATION") {
 		} else {
-			logger.Debugf("Ignored line: %s", line)
+			logger.Tracef("Ignored line: %s", line)
 		}
 	}
 
@@ -548,6 +682,8 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 		clients = append(clients, d.AltClients...)
 	} else if useAlt == 0 {
 		clients = append(clients, d.Clients...)
+		clients = append(clients, d.Clients...)
+		clients = append(clients, d.AltClients...)
 	} else {
 		if useAlt > useMain {
 			clients = append(clients, d.AltClients...)
@@ -569,7 +705,10 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 		clients = append(clients, d.AltClients...)
 		clients = append(clients, d.Clients...)
 	}*/
-
+	timeout := time.Millisecond * 1500
+	if isAlt {
+		timeout = time.Millisecond * 2500
+	}
 breakout:
 	for i, client := range clients {
 		go doQuery(client)
@@ -588,7 +727,7 @@ breakout:
 				d.altdownloadErr.Flush()
 			}
 			break breakout
-		case <-time.After(time.Millisecond * 2500): // failed to download within timeout, issue another req
+		case <-time.After(timeout): // failed to download within timeout, issue another req
 			logger.Debugf("Download m3u8 %s timeout with client %d", curUrl, i)
 		}
 	}
@@ -624,12 +763,16 @@ func (d *HLSDownloader) Downloader() {
 
 // download alt m3u8 every 3 seconds
 func (d *HLSDownloader) AltDownloader() {
-	ticker := time.NewTicker(time.Second * 3)
+	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 	for {
 		err := d.m3u8Handler(true)
 		if err != nil {
-			d.Logger.WithError(err).Infof("Alt m3u8 download failed")
+			if strings.Contains(err.Error(), "aborting") {
+				time.Sleep(10 * time.Second)
+			} else {
+				d.Logger.WithError(err).Infof("Alt m3u8 download failed")
+			}
 		}
 		if d.AltStopped {
 			break
@@ -896,6 +1039,7 @@ func (d *HLSDownloader) Writer() {
 				} else {
 					d.SeqMap.Range(func(key, value interface{}) bool {
 						if key.(int) > curSeq+3 && value.(*HLSSegment).Data != nil {
+							d.Logger.Warnf("curSeq %d lags behind segData %d!", curSeq, key.(int))
 							isLagged = true
 							return false
 						} else {
@@ -926,8 +1070,12 @@ func (d *HLSDownloader) Writer() {
 	}
 }
 
+var AltDownSem = semaphore.NewWeighted(8)
+
 // Download the segments located in the alt cache
 func (d *HLSDownloader) AltSegDownloader() {
+	AltSemaphore.Acquire(context.Background(), 1)
+	defer AltSemaphore.Release(1)
 	for _, _segNo := range d.AltSeqMap.Keys() {
 		segNo := _segNo.(int)
 		_segData, ok := d.AltSeqMap.Peek(segNo)
@@ -936,9 +1084,18 @@ func (d *HLSDownloader) AltSegDownloader() {
 			if segData.Data == nil {
 				go func(segNo int, segData *HLSSegment) {
 					if segData.Data == nil {
-						ret := d.handleAltSegment(segData)
+						ret, errs := d.handleAltSegment(segData)
 						if !ret {
 							d.AltSeqMap.Remove(segNo)
+						}
+						if errs != nil {
+							_ori_errs, loaded := d.altSegErr.LoadOrStore(fmt.Sprintf("%d|%s", segNo, segData.Url), errs)
+							ori_errs := _ori_errs.([]error)
+							if !loaded {
+								for _, c := range errs {
+									ori_errs = append(ori_errs, c)
+								}
+							}
 						}
 					}
 				}(segNo, segData)
@@ -948,7 +1105,7 @@ func (d *HLSDownloader) AltSegDownloader() {
 	}
 }
 
-var AltSemaphore = semaphore.NewWeighted(12)
+var AltSemaphore = semaphore.NewWeighted(30)
 
 // AltWriter writes the alt hls stream's segments into _tail.ts files
 func (d *HLSDownloader) AltWriter() {
@@ -975,6 +1132,14 @@ func (d *HLSDownloader) AltWriter() {
 	}()
 	d.AltSegDownloader()
 	time.Sleep(20 * time.Second)
+	errMapCpy := map[string][]error{}
+	d.altSegErr.Range(func(key, value interface{}) bool {
+		k := key.(string)
+		v := value.([]error)
+		errMapCpy[k] = v
+		return true
+	})
+	d.Logger.Infof("Errors during alt download: %v", errMapCpy)
 	segs := []int{}
 	for _, _segNo := range d.AltSeqMap.Keys() {
 		segNo := _segNo.(int)
@@ -985,7 +1150,6 @@ func (d *HLSDownloader) AltWriter() {
 			}
 		}
 	}
-	d.Logger.Infof("Got tail segs: %s", segs)
 
 	min := 10000000000
 	max := -1000
@@ -997,6 +1161,7 @@ func (d *HLSDownloader) AltWriter() {
 			max = v.(int)
 		}
 	}
+	d.Logger.Infof("Got tail segs: %s, key max: %d, min %d", segs, max, min)
 
 	// sometimes the cdn will reset everything back to 1 and then restart, so after wrote the
 	// last segments, we try to write the first parts
@@ -1014,13 +1179,16 @@ func (d *HLSDownloader) AltWriter() {
 	}
 
 	startNo := min
-	lastGood := min
+	lastGood := max
 	for i := startNo; i <= max; i++ {
 		if seg, ok := d.AltSeqMap.Peek(i); ok {
 			if seg.(*HLSSegment).Data != nil {
 				lastGood = startNo
 				continue
 			}
+		}
+		if i > max-3 {
+			continue
 		}
 		startNo = i
 	}
@@ -1071,6 +1239,7 @@ func (d *HLSDownloader) AltWriter() {
 func (d *HLSDownloader) startDownload() error {
 	var err error
 
+	d.FinishSeq = -1
 	// rate limit, so we won't break up all things
 	d.segRl = ratelimit.New(1)
 
@@ -1117,16 +1286,18 @@ func (d *HLSDownloader) startDownload() error {
 
 	if hasAlt {
 		d.Logger.Infof("Use alt downloader")
-		go func() {
-			for {
-				d.AltWorker()
-				if d.AltStopped {
-					break
+		time.AfterFunc(60*time.Second, func() {
+			go func() {
+				for {
+					d.AltWorker()
+					if d.AltStopped {
+						break
+					}
 				}
-			}
-		}()
-		d.altforceRefreshChan <- 1
-		time.AfterFunc(30*time.Second, d.AltDownloader)
+			}()
+			d.altforceRefreshChan <- 1
+			time.AfterFunc(30*time.Second, d.AltDownloader)
+		})
 	} else {
 		d.Logger.Infof("Disabled alt downloader")
 	}
@@ -1173,6 +1344,9 @@ func (dd *DownloaderGo) doDownloadHls(entry *log.Entry, output string, video *in
 				TLSNextProto:          make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
 				//DisableCompression:    true,
 				DisableKeepAlives: false,
+				TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+				DialContext:       http.DefaultTransport.(*http.Transport).DialContext,
+				DialTLS:           http.DefaultTransport.(*http.Transport).DialTLS,
 			},
 			Timeout: 60 * time.Second,
 		},
@@ -1191,6 +1365,7 @@ func (dd *DownloaderGo) doDownloadHls(entry *log.Entry, output string, video *in
 					Proxy:        http.ProxyURL(proxyUrl),
 					//DisableCompression: true,
 					DisableKeepAlives: false,
+					TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 				},
 				Timeout: 100 * time.Second,
 			},
@@ -1380,7 +1555,7 @@ func (d *DownloaderGo) StartDownload(video *interfaces.VideoInfo, proxy string, 
 				return fmt.Errorf("Unknown stream type: %s", streamtype)
 			}
 		} else {
-			logger.Infof("Failed to query m3u8 url with isAlt: %s, err: %s", d.useAlt, err)
+			logger.WithField("alt", d.useAlt).Infof("Failed to query m3u8 url, err: %s", err)
 			if needAbort {
 				return fmt.Errorf("abort")
 			}

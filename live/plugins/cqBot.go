@@ -60,7 +60,7 @@ func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 	}
 
 	if !config.NeedCQBot {
-		log.Debug(video.UsersConfig.Name + " needn't cq")
+		log.Tracef(video.UsersConfig.Name + " needn't cq")
 		return nil
 	}
 

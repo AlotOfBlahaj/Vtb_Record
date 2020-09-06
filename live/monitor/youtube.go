@@ -105,7 +105,7 @@ func (y *YoutubePoller) parseBaseStatus(rawPage string) ([]string, error) {
 		}
 	}
 
-	log.Debugf("Parsed base uids: %s", livingUids)
+	log.Tracef("Parsed base uids: %s", livingUids)
 	return livingUids, nil
 }
 
@@ -141,7 +141,7 @@ func (y *YoutubePoller) parseSubscStatus(rawPage string) (map[string]LiveInfo, e
 	}
 
 	//y.LivingUids = livingUids
-	log.Debugf("Parsed uids: %s", livingUids)
+	log.Tracef("Parsed uids: %s", livingUids)
 	return livingUids, nil
 }
 

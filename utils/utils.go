@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/fzxiao233/Go-Emoji-Utils"
 	"github.com/mitchellh/mapstructure"
@@ -38,10 +39,14 @@ func MapToStruct(mapVal map[string]interface{}, structVal interface{}) error {
 }
 
 func HttpGetBuffer(client *http.Client, url string, header map[string]string, buf *bytes.Buffer) (*bytes.Buffer, error) {
+	return HttpGetBufferEx(context.Background(), client, url, header, buf)
+}
+
+func HttpGetBufferEx(ctx context.Context, client *http.Client, url string, header map[string]string, buf *bytes.Buffer) (*bytes.Buffer, error) {
 	if client == nil {
 		client = &http.Client{}
 	}
-	req, _ := http.NewRequest("GET", url, nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.8")
 	for k, v := range header {

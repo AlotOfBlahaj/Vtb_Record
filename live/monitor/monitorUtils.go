@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"crypto/tls"
 	"github.com/fzxiao233/Vtb_Record/config"
 	. "github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/utils"
@@ -52,7 +53,8 @@ func createMonitorCtx(module config.ModuleConfig) MonitorCtx {
 	if ok && proxy != "" {
 		proxyUrl, _ := url.Parse("socks5://" + proxy)
 		transport := &http.Transport{
-			Proxy: http.ProxyURL(proxyUrl),
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			Proxy:           http.ProxyURL(proxyUrl),
 		}
 
 		//adding the Transport object to the http Client
@@ -63,8 +65,10 @@ func createMonitorCtx(module config.ModuleConfig) MonitorCtx {
 	} else {
 		//client = http.DefaultClient
 		client = &http.Client{
-			Transport: &http.Transport{},
-			Timeout:   60 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+			Timeout: 60 * time.Second,
 		}
 	}
 	ctx.Client = client

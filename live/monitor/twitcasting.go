@@ -1,11 +1,13 @@
 package monitor
 
 import (
+	"context"
 	"github.com/bitly/go-simplejson"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/semaphore"
 	"strconv"
 	"strings"
 )
@@ -52,7 +54,13 @@ func (t *Twitcasting) CreateVideo(usersConfig config.UsersConfig) *interfaces.Vi
 	}
 	return v
 }
+
+var TwitSemaphore = semaphore.NewWeighted(3)
+
 func (t *Twitcasting) CheckLive(usersConfig config.UsersConfig) bool {
+	TwitSemaphore.Acquire(context.Background(), 1)
+	defer TwitSemaphore.Release(1)
+
 	t.TargetId = usersConfig.TargetId
 	err := t.getVideoInfo()
 	if err != nil {

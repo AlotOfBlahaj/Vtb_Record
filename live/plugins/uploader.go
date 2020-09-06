@@ -3,7 +3,6 @@ package plugins
 import (
 	"encoding/json"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
-	"github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -41,7 +40,7 @@ func (p *PluginUploader) DownloadStart(process *videoworker.ProcessVideo) error 
 	}
 	data, _ := json.Marshal(u)
 	log.Debug(string(data))
-	utils.Publish(data, "upload")
+	Publish(data, "upload")
 	return nil
 }
 

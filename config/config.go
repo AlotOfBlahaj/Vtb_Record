@@ -46,11 +46,15 @@ type MainConfig struct {
 	UploadDir        string
 	Module           []ModuleConfig
 	PprofHost        string
+	OutboundAddrs    []string
+	DomainRewrite    map[string]([]string)
 	RedisHost        string
 	ExpressPort      string
 	EnableTS2MP4     bool
 	ExtraConfig      map[string]interface{}
 }
+
+var v *viper.Viper
 
 func InitConfig() {
 	log.Print("Init config!")
@@ -66,15 +70,17 @@ func initConfig() {
 	viper.AddConfigPath("..")
 	viper.AddConfigPath("../..")
 	viper.SetConfigType("json")*/
-	viper.WatchConfig()
-	err := viper.ReadInConfig()
+	v = viper.NewWithOptions(viper.KeyDelimiter("::::"))
+	v.SetConfigFile(viper.ConfigFileUsed())
+	v.WatchConfig()
+	err := v.ReadInConfig()
 	if err != nil {
 		fmt.Printf("config file error: %s\n", err)
 		os.Exit(1)
 	}
 
 	ConfigChanged = true
-	viper.OnConfigChange(func(in fsnotify.Event) {
+	v.OnConfigChange(func(in fsnotify.Event) {
 		ConfigChanged = true
 	})
 }
@@ -84,14 +90,14 @@ func ReloadConfig() (bool, error) {
 		return false, nil
 	}
 	ConfigChanged = false
-	err := viper.ReadInConfig()
+	err := v.ReadInConfig()
 	if err != nil {
 		return true, err
 	}
 	config := &MainConfig{}
 	mdMap := make(map[string]*mapstructure.Metadata, 10)
 	mdMap[""] = &mapstructure.Metadata{}
-	err = viper.Unmarshal(config, func(c *mapstructure.DecoderConfig) {
+	err = v.Unmarshal(config, func(c *mapstructure.DecoderConfig) {
 		c.DecodeHook = mapstructure.ComposeDecodeHookFunc(
 			func(inType reflect.Type, outType reflect.Type, input interface{}) (interface{}, error) {
 				if inType.Kind() == reflect.Map && outType.Kind() == reflect.Struct { // we'll decoding a struct
@@ -114,14 +120,32 @@ func ReloadConfig() (bool, error) {
 			c.DecodeHook)
 	})
 	if err != nil {
-		fmt.Println("Struct config error")
+		fmt.Printf("Struct config error: %s", err)
 	}
 	/*modules := viper.AllSettings()["module"].([]interface{})
 	for i := 0; i < len(modules); i++ {
 		Config.Module[i].ExtraConfig = modules[i].(map[string]interface{})
 	}*/
 	Config = config
+	UpdateLogLevel()
+	return true, nil
+}
 
+func LevelStrParse(levelStr string) (level logrus.Level) {
+	level = logrus.InfoLevel
+	if levelStr == "debug" {
+		level = logrus.DebugLevel
+	} else if levelStr == "info" {
+		level = logrus.InfoLevel
+	} else if levelStr == "warn" {
+		level = logrus.WarnLevel
+	} else if levelStr == "error" {
+		level = logrus.ErrorLevel
+	}
+	return level
+}
+
+func UpdateLogLevel() {
 	fs.Config.LogLevel = fs.LogLevelInfo
 	if Config.RLogLevel == "debug" {
 		fs.Config.LogLevel = fs.LogLevelDebug
@@ -132,20 +156,11 @@ func ReloadConfig() (bool, error) {
 	} else if Config.RLogLevel == "error" {
 		fs.Config.LogLevel = fs.LogLevelError
 	}
-	log.Printf("Set rclone log level to %s", fs.Config.LogLevel)
+	logrus.Printf("Set rclone logrus level to %s", fs.Config.LogLevel)
 
-	level := logrus.InfoLevel
-	if Config.LogLevel == "debug" {
-		level = logrus.DebugLevel
-	} else if Config.LogLevel == "info" {
-		level = logrus.InfoLevel
-	} else if Config.LogLevel == "warn" {
-		level = logrus.WarnLevel
-	} else if Config.LogLevel == "error" {
-		level = logrus.ErrorLevel
+	if ConsoleHook != nil {
+		level := LevelStrParse(Config.LogLevel)
+		ConsoleHook.LogLevel = level
+		logrus.Printf("Set logrus console level to %s", level)
 	}
-
-	logrus.SetLevel(level)
-	log.Printf("Set log level to %s", level)
-	return true, nil
 }

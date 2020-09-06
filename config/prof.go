@@ -1,8 +1,7 @@
-package utils
+package config
 
 import (
 	"context"
-	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/gogf/greuse"
 	log "github.com/sirupsen/logrus"
 	"net"
@@ -33,24 +32,26 @@ var PprofServer *http.Server
 func InitProfiling() {
 	go func() {
 		logger := log.WithField("prof", true)
-		logger.Warnf("Starting pprof server")
 		ticker := time.NewTicker(time.Minute * 1)
 		for {
 			//go http.ListenAndServe("0.0.0.0:49314", nil)
-			if PprofServer == nil || PprofServer.Addr != config.Config.PprofHost {
+			if PprofServer == nil || PprofServer.Addr != Config.PprofHost {
+				logger.Warnf("Starting pprof server")
 				if PprofServer != nil {
 					go PprofServer.Shutdown(context.Background())
 				}
-				//PprofServer = &http.Server{Addr: config.Config.PprofHos5t, Handler: nil}
-				listener, err := greuse.Listen("tcp", config.Config.PprofHost)
+				//PprofServer = &http.Server{Addr: config.Config.PprofHost, Handler: nil}
+				listener, err := greuse.Listen("tcp", Config.PprofHost)
 				if listener == nil {
 					logger.Warnf("Error creating reusable listener, creating a normal one instead!")
-					listener, err = net.Listen("tcp", config.Config.PprofHost)
+					listener, err = net.Listen("tcp", Config.PprofHost)
 				}
 				if err != nil {
 					logger.WithError(err).Warnf("Failed to reuse-listen addr")
 				}
-				PprofServer = &http.Server{}
+				PprofServer = &http.Server{
+					Addr: Config.PprofHost,
+				}
 				//go PprofServer.ListenAndServe()
 				go PprofServer.Serve(listener)
 			}
@@ -76,7 +77,7 @@ func InitProfiling() {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(time.Second * 3)
 	for {
 		start := time.Now()
 		debug.FreeOSMemory()

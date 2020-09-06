@@ -108,7 +108,7 @@ func (b *BilibiliPoller) getStatusUseFollow() error {
 			user := _user.(map[string]interface{})
 			b.LivingUids[user["uid"].(int)] = user["link"].(string)
 	 	}*/
-	log.Debugf("Parsed uids: %v", b.LivingUids)
+	log.Tracef("Parsed uids: %v", b.LivingUids)
 	return nil
 }
 
@@ -152,7 +152,7 @@ func (b *BilibiliPoller) getStatusUseBatch() error {
 		}
 	}
 	b.LivingUids = livingUids
-	log.Debugf("Parsed uids: %v", b.LivingUids)
+	log.Tracef("Parsed uids: %v", b.LivingUids)
 	return nil
 }
 
