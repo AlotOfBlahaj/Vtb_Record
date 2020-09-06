@@ -1,9 +1,11 @@
-package monitor
+package youtube
 
 import (
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
+	"github.com/fzxiao233/Vtb_Record/live/monitor/base"
+	"github.com/fzxiao233/Vtb_Record/live/monitor/bilibili"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -18,12 +20,12 @@ type yfConfig struct {
 	Target string
 }
 type Youtube struct {
-	BaseMonitor
+	base.BaseMonitor
 	yfConfig
 	usersConfig config.UsersConfig
 }
 
-func getVideoInfo(ctx *MonitorCtx, base string, channelId string) (*LiveInfo, error) {
+func getVideoInfo(ctx *base.MonitorCtx, base string, channelId string) (*bilibili.LiveInfo, error) {
 	url := base + "/channel/" + channelId + "/live"
 	htmlBody, err := ctx.HttpGet(url, map[string]string{})
 	if err != nil {
@@ -47,7 +49,7 @@ func getVideoInfo(ctx *MonitorCtx, base string, channelId string) (*LiveInfo, er
 	if !IsLive {
 		return nil, err
 	} else {
-		return &LiveInfo{
+		return &bilibili.LiveInfo{
 			Title:         videoDetails.Get("title").String(),
 			StreamingLink: "https://www.youtube.com/watch?v=" + videoDetails.Get("videoId").String(),
 		}, nil
@@ -57,7 +59,7 @@ func getVideoInfo(ctx *MonitorCtx, base string, channelId string) (*LiveInfo, er
 }
 
 type YoutubePoller struct {
-	LivingUids map[string]LiveInfo
+	LivingUids map[string]bilibili.LiveInfo
 	lock       sync.Mutex
 }
 
@@ -109,8 +111,8 @@ func (y *YoutubePoller) parseBaseStatus(rawPage string) ([]string, error) {
 	return livingUids, nil
 }
 
-func (y *YoutubePoller) parseSubscStatus(rawPage string) (map[string]LiveInfo, error) {
-	livingUids := make(map[string]LiveInfo)
+func (y *YoutubePoller) parseSubscStatus(rawPage string) (map[string]bilibili.LiveInfo, error) {
+	livingUids := make(map[string]bilibili.LiveInfo)
 
 	re, _ := regexp.Compile(`\["ytInitialData"\]\s*=\s*([^\n]+?});`)
 	result := re.FindStringSubmatch(rawPage)
@@ -132,7 +134,7 @@ func (y *YoutubePoller) parseSubscStatus(rawPage string) (map[string]LiveInfo, e
 			videoTitle := item.Get("gridVideoRenderer.title.simpleText")
 			//upcomingEventData := item.Get("gridVideoRenderer.upcomingEventData")
 
-			livingUids[channelId.String()] = LiveInfo{
+			livingUids[channelId.String()] = bilibili.LiveInfo{
 				Title:         videoTitle.String(),
 				StreamingLink: "https://www.youtube.com/watch?v=" + videoId.String(),
 			}
@@ -147,8 +149,8 @@ func (y *YoutubePoller) parseSubscStatus(rawPage string) (map[string]LiveInfo, e
 
 func (y *YoutubePoller) getLiveStatus() error {
 	var err error
-	ctx := getCtx("Youtube")
-	//mod := getMod("Youtube")
+	ctx := base.GetCtx("Youtube")
+	//mod := interfaces.GetMod("Youtube")
 	apihosts := []string{
 		"https://nameless-credit-7c9e.misty.workers.dev",
 		"https://delicate-cherry-9564.vtbrecorder1.workers.dev",
@@ -189,7 +191,7 @@ func (y *YoutubePoller) getLiveStatus() error {
 		return err
 	}
 
-	livingUids := make(map[string]LiveInfo)
+	livingUids := make(map[string]bilibili.LiveInfo)
 	for k, v := range subscUids {
 		livingUids[k] = v
 	}
@@ -216,7 +218,7 @@ func (y *YoutubePoller) StartPoll() error {
 	if err != nil {
 		return err
 	}
-	mod := getMod("Youtube")
+	mod := base.GetMod("Youtube")
 	_interval, ok := mod.ExtraConfig["PollInterval"]
 	interval := time.Duration(config.Config.CriticalCheckSec) * time.Second
 	if ok {
@@ -234,7 +236,7 @@ func (y *YoutubePoller) StartPoll() error {
 	return nil
 }
 
-func (y *YoutubePoller) IsLiving(uid string) *LiveInfo {
+func (y *YoutubePoller) IsLiving(uid string) *bilibili.LiveInfo {
 	y.lock.Lock()
 	if y.LivingUids == nil {
 		err := y.StartPoll()
@@ -283,7 +285,7 @@ func (y *Youtube) CheckLive(usersConfig config.UsersConfig) bool {
 		y.IsLive = false
 	}
 	if !y.IsLive {
-		NoLiving("Youtube", usersConfig.Name)
+		base.NoLiving("Youtube", usersConfig.Name)
 	}
 	return y.yfConfig.IsLive
 }

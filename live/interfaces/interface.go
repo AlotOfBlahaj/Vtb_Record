@@ -1,5 +1,9 @@
 package interfaces
 
+/*
+	This package contains global structures to avoid import loop
+*/
+
 import (
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"

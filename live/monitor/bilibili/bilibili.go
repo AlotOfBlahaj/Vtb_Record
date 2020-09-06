@@ -1,10 +1,11 @@
-package monitor
+package bilibili
 
 import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
+	"github.com/fzxiao233/Vtb_Record/live/monitor/base"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
@@ -15,7 +16,7 @@ import (
 )
 
 type Bilibili struct {
-	BaseMonitor
+	base.BaseMonitor
 	TargetId      string
 	Title         string
 	isLive        bool
@@ -35,7 +36,7 @@ type BilibiliPoller struct {
 var Poller BilibiliPoller
 
 func (b *BilibiliPoller) getStatusUseFollow() error {
-	ctx := getCtx("Bilibili")
+	ctx := base.GetCtx("Bilibili")
 	if ctx == nil {
 		return nil
 	}
@@ -113,7 +114,7 @@ func (b *BilibiliPoller) getStatusUseFollow() error {
 }
 
 func (b *BilibiliPoller) getStatusUseBatch() error {
-	ctx := getCtx("Bilibili")
+	ctx := base.GetCtx("Bilibili")
 	_url, ok := ctx.ExtraModConfig["ApiHostUrl"]
 	var url string
 	if ok {
@@ -122,7 +123,7 @@ func (b *BilibiliPoller) getStatusUseBatch() error {
 		url = "https://api.live.bilibili.com"
 	}
 
-	biliMod := getMod("Bilibili")
+	biliMod := base.GetMod("Bilibili")
 	allUids := make([]string, 0)
 	for _, u := range biliMod.Users {
 		allUids = append(allUids, u.TargetId)
@@ -167,7 +168,7 @@ func (b *BilibiliPoller) StartPoll() error {
 	}
 	go func() {
 		for {
-			biliMod := getMod("Bilibili")
+			biliMod := base.GetMod("Bilibili")
 			_interval, ok := biliMod.ExtraConfig["PollInterval"]
 			interval := time.Duration(config.Config.CriticalCheckSec) * time.Second
 			if ok {
@@ -218,14 +219,14 @@ func (b *Bilibili) getVideoInfoByPoll() error {
 }
 
 func (b *Bilibili) getVideoInfoByRoom() error {
-	_url, ok := b.ctx.ExtraModConfig["ApiHostUrl"]
+	_url, ok := b.Ctx.ExtraModConfig["ApiHostUrl"]
 	var url string
 	if ok {
 		url = _url.(string)
 	} else {
 		url = "https://api.live.bilibili.com"
 	}
-	rawInfoJSON, err := b.ctx.HttpGet(url+"/room/v1/Room/getRoomInfoOld?mid="+b.TargetId, map[string]string{})
+	rawInfoJSON, err := b.Ctx.HttpGet(url+"/room/v1/Room/getRoomInfoOld?mid="+b.TargetId, map[string]string{})
 	if err != nil {
 		return err
 	}
@@ -251,7 +252,7 @@ func (b *Bilibili) CreateVideo(usersConfig config.UsersConfig) *interfaces.Video
 
 func (b *Bilibili) CheckLive(usersConfig config.UsersConfig) bool {
 	b.TargetId = usersConfig.TargetId
-	ret, ok := b.ctx.ExtraModConfig["UseFollowPolling"]
+	ret, ok := b.Ctx.ExtraModConfig["UseFollowPolling"]
 	var err error
 	if ok && ret.(bool) {
 		err = b.getVideoInfoByPoll()
@@ -264,7 +265,7 @@ func (b *Bilibili) CheckLive(usersConfig config.UsersConfig) bool {
 		log.WithField("user", fmt.Sprintf("%s|%s", "Bilibili", usersConfig.Name)).WithError(err).Errorf("GetVideoInfo error")
 	}
 	if !b.isLive {
-		NoLiving("Bilibili", usersConfig.Name)
+		base.NoLiving("Bilibili", usersConfig.Name)
 	}
 	return b.isLive
 }
