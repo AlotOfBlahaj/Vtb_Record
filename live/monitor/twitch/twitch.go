@@ -1,4 +1,4 @@
-package monitor
+package twitch
 
 import (
 	"github.com/fzxiao233/Vtb_Record/config"
@@ -10,7 +10,7 @@ type Twitch struct {
 }
 
 func (t Twitch) getLiveStatus() error {
-	_, err := t.ctx.HttpGet(t.APIUrl, map[string]string{})
+	_, err := t.Ctx.HttpGet(t.APIUrl, map[string]string{})
 	if err != nil {
 		return err
 	}

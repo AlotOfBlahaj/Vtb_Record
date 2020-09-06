@@ -1,5 +1,9 @@
 package interfaces
 
+/*
+	This package contains global structures across the whole process to avoid import loop
+*/
+
 import (
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
@@ -22,7 +26,9 @@ func (h *VideoInfoLogHook) Fire(entry *logrus.Entry) error {
 	if !ok {
 		return nil
 	}
-	entry.Data["video"] = fmt.Sprintf("%s|%s|%s", v.Provider, v.UsersConfig.Name, v.Title)
+	delete(entry.Data, "video")
+	entry.Data["user"] = fmt.Sprintf("%s|%s", v.Provider, v.UsersConfig.Name)
+	entry.Data["title"] = v.Title
 	return nil
 }
 
@@ -31,13 +37,12 @@ func init() {
 }
 
 type VideoInfo struct {
-	Title    string
-	Date     string
-	Target   string
-	Provider string
-	FileName string
-	FilePath string
-	//Target          string
+	Title           string
+	Date            string
+	Target          string
+	Provider        string
+	FileName        string
+	FilePath        string
 	UsersConfig     config.UsersConfig
 	TransRecordPath string
 }

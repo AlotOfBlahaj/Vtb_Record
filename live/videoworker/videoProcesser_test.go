@@ -5,6 +5,7 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
+	"github.com/fzxiao233/Vtb_Record/live/monitor/base"
 	"testing"
 )
 
@@ -28,7 +29,7 @@ func TestProcessVideo_isNewLive(t *testing.T) {
 				UsersConfig: config.UsersConfig{},
 			}, isLive: true},
 			liveTrace: live.GetLiveStatus,
-			monitor: &monitor.Mock{
+			monitor: &base.Mock{
 				Video: &interfaces.VideoInfo{
 					Title:       "",
 					Target:      "",
@@ -45,7 +46,7 @@ func TestProcessVideo_isNewLive(t *testing.T) {
 				UsersConfig: config.UsersConfig{},
 			}, isLive: true},
 			liveTrace: live.GetLiveStatus,
-			monitor: &monitor.Mock{
+			monitor: &base.Mock{
 				Video: &interfaces.VideoInfo{
 					Title:       "1",
 					Target:      "3",
@@ -62,7 +63,7 @@ func TestProcessVideo_isNewLive(t *testing.T) {
 				UsersConfig: config.UsersConfig{},
 			}, isLive: true},
 			liveTrace: live.GetLiveStatus,
-			monitor: &monitor.Mock{
+			monitor: &base.Mock{
 				Video: &interfaces.VideoInfo{
 					Title:       "1",
 					Target:      "4",
@@ -79,7 +80,7 @@ func TestProcessVideo_isNewLive(t *testing.T) {
 				UsersConfig: config.UsersConfig{},
 			}, isLive: true},
 			liveTrace: live.GetLiveStatus,
-			monitor: &monitor.Mock{
+			monitor: &base.Mock{
 				Video: &interfaces.VideoInfo{
 					Title:       "2",
 					Target:      "3",

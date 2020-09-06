@@ -50,10 +50,10 @@ func ExecShellEx(entry *log.Entry, redirect bool, name string, arg ...string) (s
 			_, errStderr = io.Copy(stderr, stderrIn)
 		}()
 		if errStderr != nil {
-			log.Warnf("%v", errStderr)
+			entry.Warnf("%v", errStderr)
 		}
 		if errStdout != nil {
-			log.Warnf("%v", errStdout)
+			entry.Warnf("%v", errStdout)
 		}
 	}
 

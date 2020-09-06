@@ -9,7 +9,6 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"github.com/orandin/lumberjackrus"
 	"github.com/rclone/rclone/fs"
 	rconfig "github.com/rclone/rclone/fs/config"
 	"github.com/rclone/rclone/fs/operations"
@@ -22,51 +21,12 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"path"
-	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 )
-
-// Can't be func init as we need the parsed config
-func initLog() {
-	log.Printf("Init logging!")
-	log.SetReportCaller(true)
-	// Log as JSON instead of the default ASCII formatter.
-	log.SetFormatter(&log.TextFormatter{
-		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
-			filename := path.Base(f.File)
-			_, _, shortfname := utils.RPartition(f.Function, ".")
-			return fmt.Sprintf("%s()", shortfname), fmt.Sprintf("%s:%d", filename, f.Line)
-		},
-	},
-	)
-	hook, err := lumberjackrus.NewHook(
-		&lumberjackrus.LogFile{
-			Filename:   config.Config.LogFile,
-			MaxSize:    config.Config.LogFileSize,
-			MaxBackups: 1,
-			MaxAge:     1,
-			Compress:   false,
-			LocalTime:  false,
-		},
-		log.DebugLevel,
-		&log.JSONFormatter{},
-		nil,
-	)
-
-	if err != nil {
-		panic(fmt.Errorf("NewHook Error: %s", err))
-	}
-
-	log.AddHook(hook)
-
-	fs.LogPrint = func(level fs.LogLevel, text string) {
-		log.WithField("src", "rclone").Infof(fmt.Sprintf("%-6s: %s", level, text))
-	}
-}
 
 var SafeStop bool
 
@@ -115,10 +75,6 @@ func arrangeTask() {
 		utils.MakeDir(dir)
 	}
 
-	/*defer func() {
-		panic("arrangeTask goes out!!!")
-	}()*/
-
 	var statusMx sync.Mutex
 	for {
 		var mods []config.ModuleConfig
@@ -150,11 +106,13 @@ func arrangeTask() {
 			}
 		}
 		log.Infof("current living %s", living)
-		log.Debugf("checked %s", changed)
+		log.Tracef("checked %s", changed)
 		if time.Now().Minute() > 55 || time.Now().Minute() < 5 || (time.Now().Minute() > 25 && time.Now().Minute() < 35) {
 			time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
 		}
 		time.Sleep(time.Duration(config.Config.NormalCheckSec) * time.Second)
+
+		// wait all live to finish before exit :)
 		if SafeStop {
 			break
 		}
@@ -177,7 +135,7 @@ func arrangeTask() {
 		time.Sleep(time.Second * 5)
 	}
 	log.Infof("All tasks finished! Wait an additional time to ensure everything's saved")
-	time.Sleep(time.Second * 60)
+	time.Sleep(time.Second * 300)
 	log.Infof("Everything finished, exiting now~~")
 }
 
@@ -194,7 +152,7 @@ func handleInterrupt() {
 			in.Close()
 			return true
 		})
-		time.Sleep(8 * time.Second) // wait rclone upload finish..
+		time.Sleep(20 * time.Second) // wait rclone upload finish..
 		os.Exit(0)
 	}()
 }
@@ -222,15 +180,41 @@ func main() {
 	http.DefaultTransport = &http.Transport{
 		DisableKeepAlives:  true, // disable keep alive to avoid connection reset
 		DisableCompression: true,
-		IdleConnTimeout:    time.Second * 10,
+		IdleConnTimeout:    time.Second * 20,
 		ForceAttemptHTTP2:  false,
+		TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
 		DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, err error) {
-			if addr == "www.googleapis.com:443" {
+			/*addrparts := strings.SplitN(addr, ":", 2)
+			if domains, ok := config.Config.DomainRewrite[addrparts[0]]; ok {
+				addr = utils.RandChooseStr(domains) + ":" + addrparts[1]
+			}*/
+			_addr := addr
+			if domains, ok := config.Config.DomainRewrite[addr]; ok {
+				addr = utils.RandChooseStr(domains)
+				log.Debugf("Overrided %s to %s", _addr, addr)
+			}
+			/*if addr == "www.googleapis.com:443" {
 				//addr = "216.58.198.206:443"
 				addrs := []string{"private.googleapis.com:443", "www.googleapis.com:443"}
 				addr = addrs[rand.Intn(len(addrs))]
+			}*/
+			isNumber := false
+			if _, err := strconv.Atoi(addr[0:1]); err == nil {
+				isNumber = true
 			}
-			return net.Dial(network, addr)
+			if !isNumber && config.Config.OutboundAddrs != nil && len(config.Config.OutboundAddrs) > 0 {
+				outIp := utils.RandChooseStr(config.Config.OutboundAddrs)
+				return (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+					LocalAddr: &net.TCPAddr{
+						IP:   net.ParseIP(outIp),
+						Port: 0,
+					},
+				}).DialContext(ctx, network, addr)
+			} else {
+				return net.Dial(network, addr)
+			}
 		},
 	}
 
@@ -274,6 +258,7 @@ func main() {
 			IdleConnTimeout:    time.Second * 10,
 			ForceAttemptHTTP2:  false,
 			DialTLS:            dialTls,
+			TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
 			//DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, err error) {
 			/*ipaddr := "10.168.1." + strconv.Itoa(100 + rand.Intn(20))
 			netaddr, _ := net.ResolveIPAddr("ip", ipaddr)
@@ -314,7 +299,7 @@ func main() {
 	flag.Parse()
 	viper.SetConfigFile(*confPath)
 	config.InitConfig()
-	initLog()
-	go utils.InitProfiling()
+	config.InitLog()
+	go config.InitProfiling()
 	arrangeTask()
 }

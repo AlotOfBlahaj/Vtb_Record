@@ -27,7 +27,7 @@ func (p *PluginManager) OnLiveStart(video *ProcessVideo) {
 			defer wg.Done()
 			err := callback.LiveStart(video)
 			if err != nil {
-				log.Errorf("plugin %s livestart error: %s", callback, err)
+				video.getLogger().Errorf("plugin %s livestart error: %s", callback, err)
 			}
 		}(plug)
 	}
@@ -42,7 +42,7 @@ func (p *PluginManager) OnDownloadStart(video *ProcessVideo) {
 			defer wg.Done()
 			err := callback.LiveStart(video)
 			if err != nil {
-				log.Errorf("plugin %s downloadstart error: %s", callback, err)
+				video.getLogger().Errorf("plugin %s downloadstart error: %s", callback, err)
 			}
 		}(plug)
 	}
