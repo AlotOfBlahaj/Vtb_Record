@@ -215,7 +215,6 @@ func (b *Bilibili) getVideoInfoByPoll() error {
 	b.streamingLink = ret.StreamingLink
 	b.Title = ret.Title
 	return nil
-	//log.Printf("%+v", b)
 }
 
 func (b *Bilibili) getVideoInfoByRoom() error {
@@ -236,7 +235,6 @@ func (b *Bilibili) getVideoInfoByRoom() error {
 	b.streamingLink = infoJson.Get("data").Get("url").MustString("")
 	b.Title = infoJson.Get("data").Get("title").MustString("")
 	return nil
-	//log.Printf("%+v", b)
 }
 
 func (b *Bilibili) CreateVideo(usersConfig config.UsersConfig) *interfaces.VideoInfo {

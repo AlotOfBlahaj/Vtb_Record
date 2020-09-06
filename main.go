@@ -75,10 +75,6 @@ func arrangeTask() {
 		utils.MakeDir(dir)
 	}
 
-	/*defer func() {
-		panic("arrangeTask goes out!!!")
-	}()*/
-
 	var statusMx sync.Mutex
 	for {
 		var mods []config.ModuleConfig
@@ -115,6 +111,8 @@ func arrangeTask() {
 			time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
 		}
 		time.Sleep(time.Duration(config.Config.NormalCheckSec) * time.Second)
+
+		// wait all live to finish before exit :)
 		if SafeStop {
 			break
 		}

@@ -1,7 +1,7 @@
 package interfaces
 
 /*
-	This package contains global structures to avoid import loop
+	This package contains global structures across the whole process to avoid import loop
 */
 
 import (
