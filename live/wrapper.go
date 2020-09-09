@@ -14,8 +14,8 @@ func StartMonitor(mon base.VideoMonitor, usersConfig config.UsersConfig) {
 	//for {
 	pm := videoworker.PluginManager{}
 	pm.AddPlugin(&plugins.PluginCQBot{})
-	pm.AddPlugin(&plugins.PluginTranslationRecorder{})
-	pm.AddPlugin(&plugins.PluginUploader{})
+	//pm.AddPlugin(&plugins.PluginTranslationRecorder{})
+	//pm.AddPlugin(&plugins.PluginUploader{})
 
 	var fun = func(mon base.VideoMonitor) *interfaces.LiveStatus {
 		return &interfaces.LiveStatus{

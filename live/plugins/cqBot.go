@@ -34,6 +34,7 @@ func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
 }
 
 type PluginCQBot struct {
+	laseMsg string
 }
 
 func CreateLiveMsg(v *interfaces.VideoInfo) string {
@@ -65,6 +66,11 @@ func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 	}
 
 	msg := CreateLiveMsg(video)
+	if msg == p.laseMsg {
+		log.Infof("%s|%s cancel to send msg: %s", video.Provider, video.UsersConfig.Name, msg)
+		return nil
+	}
+	p.laseMsg = msg
 	c := &CQMsg{Message: msg}
 	cc := &CQConfig{
 		CQHost:  config.CQHost,

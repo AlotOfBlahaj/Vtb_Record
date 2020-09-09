@@ -31,6 +31,4 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )
 
-replace github.com/rclone/rclone => ../../rclone/rclone
 
-replace github.com/smallnest/ringbuffer => ../../smallnest/ringbuffer
