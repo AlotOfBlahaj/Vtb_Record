@@ -1,4 +1,8 @@
-package downloader
+package provbase
+
+/*
+	Contains common functions & base types for downloaders
+*/
 
 import (
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
@@ -10,7 +14,7 @@ type DownloadProvider interface {
 	StartDownload(video *interfaces.VideoInfo, proxy string, cookie string, filepath string) error
 }
 type Downloader struct {
-	prov DownloadProvider
+	Prov DownloadProvider
 }
 
 func (d *Downloader) DownloadVideo(video *interfaces.VideoInfo, proxy string, cookie string, filePath string) string {
@@ -18,7 +22,7 @@ func (d *Downloader) DownloadVideo(video *interfaces.VideoInfo, proxy string, co
 	logger := log.WithField("video", video)
 	logger.Infof("start to download")
 	video.FilePath = filePath
-	err := d.prov.StartDownload(video, proxy, cookie, filePath)
+	err := d.Prov.StartDownload(video, proxy, cookie, filePath)
 	logger.Infof("finished with status: %s", err)
 	if !utils.IsFileExist(filePath) {
 		logger.Infof("%s the video file don't exist", filePath)
@@ -26,15 +30,4 @@ func (d *Downloader) DownloadVideo(video *interfaces.VideoInfo, proxy string, co
 	}
 	logger.Infof("%s download successfully", filePath)
 	return filePath
-}
-
-func GetDownloader(providerName string) *Downloader {
-	if providerName == "" || providerName == "streamlink" {
-		return &Downloader{&DownloaderStreamlink{}}
-	} else if providerName == "go" {
-		return &Downloader{&DownloaderGo{}}
-	} else {
-		log.Fatalf("Unknown download provider %s", providerName)
-		return nil
-	}
 }

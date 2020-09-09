@@ -1,4 +1,4 @@
-package utils
+package plugins
 
 import (
 	"github.com/fzxiao233/Vtb_Record/config"

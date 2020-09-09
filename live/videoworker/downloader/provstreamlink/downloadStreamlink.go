@@ -1,10 +1,11 @@
-package downloader
+package provstreamlink
 
 import (
 	"bufio"
 	"bytes"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
+	"github.com/fzxiao233/Vtb_Record/live/videoworker/downloader/provbase"
 	"github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -17,7 +18,7 @@ func addStreamlinkProxy(co []string, proxy string) []string {
 }
 
 type DownloaderStreamlink struct {
-	Downloader
+	provbase.Downloader
 }
 
 func (d *DownloaderStreamlink) StartDownload(video *interfaces.VideoInfo, proxy string, cookie string, filepath string) error {
@@ -75,7 +76,7 @@ func (d *StreamlinkDownload) doDownload() error {
 	go func() {
 		_, errStdout := io.Copy(out, stdoutIn)
 		if errStdout != nil {
-			d.Logger.Warn("Error during writing streamlink video: %s", errStdout)
+			d.Logger.WithError(errStdout).Warn("Error during writing streamlink video")
 		}
 		errChan <- errStdout
 	}()

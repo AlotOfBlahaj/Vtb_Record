@@ -68,7 +68,7 @@ func (p *ProcessVideo) StartProcessVideo() {
 	go p.keepLiveAlive()
 	if p.isNeedDownload() {
 		if err := p.prepareDownload(); err != nil {
-			log.Warnf("Failed to prepare download, err: %s", err)
+			p.getLogger().WithError(err).Warnf("Failed to prepare download")
 			p.finish <- -1
 		} else {
 			go p.Plugins.OnDownloadStart(p)
@@ -83,13 +83,13 @@ func (p *ProcessVideo) prepareDownload() error {
 	var pathSlice []string
 	if !config.Config.EnableTS2MP4 {
 		pathSlice = []string{utils.RandChooseStr(config.Config.DownloadDir), p.LiveStatus.Video.UsersConfig.Name,
-			p.liveStartTime.Format("20060102 1504")}
+			p.liveStartTime.Format("20060102 150405")}
 	} else {
 		pathSlice = []string{utils.RandChooseStr(config.Config.DownloadDir), p.LiveStatus.Video.UsersConfig.Name}
 	}
 	dirpath := strings.Join(pathSlice, "/")
 	ret, err := utils.MakeDir(dirpath)
-	log.Debugf("Made directory: %s, ret: %s, err: %s", dirpath, ret, err)
+	p.getLogger().Debugf("Made directory: %s, ret: %s, err: %s", dirpath, ret, err)
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (p *ProcessVideo) isNewLive() bool {
 			p.LiveStatus.Video.Title = newLiveStatus.Video.Title
 			p.appendTitleHistory(newLiveStatus.Video.Title)
 		}
-		logger.Debugf("[isNewLive] KeepAlive")
+		logger.Trace("[isNewLive] KeepAlive")
 		return false
 	}
 }
@@ -270,13 +270,33 @@ func (p *ProcessVideo) postProcessing() string {
 		dirpath += "/"
 		dirpath += p.getFullTitle()
 		//err := os.Rename(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
-		err = utils.MoveFiles(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
-		if err != nil {
-			logger.Warn("Failed to rename from [%s] to [%s]! err: %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath, err)
-			return ""
+
+		doMove := func(src string, dst string, quiet bool) string {
+			err = utils.MoveFiles(src, dst)
+			if err != nil {
+				if !quiet {
+					logger.WithError(err).Warn("Failed to rename from [%s] to [%s]!", src, dst)
+				} else {
+					logger.WithError(err).Info("Post renaming from [%s] to [%s] failed!", src, dst)
+				}
+			} else {
+				logger.Infof("Renamed %s to %s", src, dst)
+			}
+			if err != nil {
+				return ""
+			}
+			return dirpath
 		}
-		logger.Infof("Renamed %s to %s", p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
-		return dirpath
+
+		srcdir := p.LiveStatus.Video.UsersConfig.DownloadDir
+		dstdir := dirpath
+		time.AfterFunc(time.Second*60, func() {
+			for i := 0; i < 5; i++ {
+				doMove(srcdir, dstdir, true)
+				time.Sleep(time.Second * 60)
+			}
+		})
+		return doMove(srcdir, dstdir, false)
 	}
 }
 
