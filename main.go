@@ -11,10 +11,8 @@ import (
 	"github.com/fzxiao233/Vtb_Record/utils"
 	"github.com/rclone/rclone/fs"
 	rconfig "github.com/rclone/rclone/fs/config"
-	"github.com/rclone/rclone/fs/operations"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"io"
 	"math/rand"
 	"net"
 	"net/http"
@@ -69,12 +67,13 @@ func arrangeTask() {
 		}
 
 	}()
-
-	utils.MakeDir(config.Config.UploadDir)
+	var uploadDir = config.Config.UploadDir
+	if uploadDir != "" {
+		utils.MakeDir(uploadDir)
+	}
 	for _, dir := range config.Config.DownloadDir {
 		utils.MakeDir(dir)
 	}
-
 	var statusMx sync.Mutex
 	for {
 		var mods []config.ModuleConfig
@@ -142,19 +141,20 @@ func arrangeTask() {
 func handleInterrupt() {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		log.Warnf("Ctrl+C pressed in Terminal!")
-		operations.RcatFiles.Range(func(key, value interface{}) bool {
-			fn := key.(string)
-			log.Infof("Closing opened file: %s", fn)
-			in := value.(io.ReadCloser)
-			in.Close()
-			return true
-		})
-		time.Sleep(20 * time.Second) // wait rclone upload finish..
-		os.Exit(0)
-	}()
+	//go func() {
+	//	<-c
+	//	log.Warnf("Ctrl+C pressed in Terminal!")
+	//	operations.RcatFiles.Range(func(key, value interface{}) bool {
+	//		fn := key.(string)
+	//		log.Infof("Closing opened file: %s", fn)
+	//		in := value.(io.ReadCloser)
+	//		in.Close()
+	//		return true
+	//	})
+	//	time.Sleep(20 * time.Second) // wait rclone upload finish..
+	//	os.Exit(0)
+	//}()
+	//os.Exit(0)
 }
 
 func handleUpdate() {
