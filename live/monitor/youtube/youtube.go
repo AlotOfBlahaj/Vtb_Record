@@ -166,17 +166,30 @@ func (y *YoutubePoller) getLiveStatus() error {
 		"https://square-violet-9579.vtbrecorder11.workers.dev",
 	}
 
-	rawPageBase, err := ctx.HttpGet(
-		RandChooseStr(apihosts),
-		map[string]string{})
-	if err != nil {
-		return err
-	}
-	pagebase := string(rawPageBase)
-	baseUids, err := y.parseBaseStatus(pagebase)
-	if err != nil {
-		return err
-	}
+	livingUids := make(map[string]bilibili.LiveInfo)
+	/*
+		rawPageBase, err := ctx.HttpGet(
+			RandChooseStr(apihosts),
+			map[string]string{})
+		if err != nil {
+			return err
+		}
+		pagebase := string(rawPageBase)
+		baseUids, err := y.parseBaseStatus(pagebase)
+		if err != nil {
+			return err
+		}
+		for _, chanId := range baseUids {
+			if _, ok := livingUids[chanId]; !ok {
+				liveinfo, err := getVideoInfo(ctx, RandChooseStr(apihosts), chanId)
+				if liveinfo != nil {
+					livingUids[chanId] = *liveinfo
+				} else {
+					log.WithError(err).Warnf("Failed to get live info for channel %s", chanId)
+				}
+			}
+		}
+	*/
 
 	rawPage, err := ctx.HttpGet(
 		RandChooseStr(apihosts)+"/feed/subscriptions/",
@@ -184,27 +197,15 @@ func (y *YoutubePoller) getLiveStatus() error {
 	if err != nil {
 		return err
 	}
-
 	page := string(rawPage)
 	subscUids, err := y.parseSubscStatus(page)
 	if err != nil {
 		return err
 	}
-
-	livingUids := make(map[string]bilibili.LiveInfo)
 	for k, v := range subscUids {
 		livingUids[k] = v
 	}
-	for _, chanId := range baseUids {
-		if _, ok := livingUids[chanId]; !ok {
-			liveinfo, err := getVideoInfo(ctx, RandChooseStr(apihosts), chanId)
-			if liveinfo != nil {
-				livingUids[chanId] = *liveinfo
-			} else {
-				log.WithError(err).Warnf("Failed to get live info for channel %s", chanId)
-			}
-		}
-	}
+
 	y.LivingUids = livingUids
 	return nil
 }
