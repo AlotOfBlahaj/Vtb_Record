@@ -52,6 +52,7 @@ type HLSDownloader struct {
 
 	SeqMap     sync.Map
 	AltSeqMap  *lru.Cache
+	SegLen     float64
 	FinishSeq  int
 	lastSeqNo  int
 	Stopped    bool
@@ -258,6 +259,12 @@ func (d *HLSDownloader) m3u8Parser(logger *log.Entry, parsedurl *url.URL, m3u8 s
 			curseq = _seq
 		} else if strings.HasPrefix(line, "#EXTINF:") {
 			//logger.Debugf("Got seg %d %s", curseq+len(segs), m3u8lines[i+1])
+			seglen, err := strconv.ParseFloat(strings.TrimSuffix(line[8:], ","), 64)
+			if err != nil {
+				d.Logger.Infof("Failed to parse seglen %s", err)
+			} else {
+				d.SegLen = seglen
+			}
 			segs = append(segs, m3u8lines[i+1])
 			i += 1
 		} else if strings.HasPrefix(line, "#EXT-X-ENDLIST") {
@@ -496,8 +503,8 @@ breakout:
 
 // query main m3u8 every 2 seconds
 func (d *HLSDownloader) Downloader() {
-	ticker := time.NewTicker(time.Second * 2)
-	defer ticker.Stop()
+	curDuration := 2.0
+	ticker := time.NewTicker(time.Duration(float64(time.Second) * curDuration))
 	breakflag := false
 	for {
 		go func() {
@@ -518,7 +525,14 @@ func (d *HLSDownloader) Downloader() {
 			break
 		}
 		<-ticker.C // if the handler takes too long, the next tick will arrive at once
+		if d.SegLen < curDuration {
+			ticker.Stop()
+			curDuration = d.SegLen * 0.8
+			d.Logger.Infof("Using new hls interval: %f", curDuration)
+			ticker = time.NewTicker(time.Duration(float64(time.Second) * curDuration))
+		}
 	}
+	ticker.Stop()
 }
 
 // update the main hls stream's link
@@ -710,6 +724,7 @@ func (d *HLSDownloader) startDownload() error {
 	d.FinishSeq = -1
 	// rate limit, so we won't break up all things
 	d.segRl = ratelimit.New(1)
+	d.SegLen = 2.0
 
 	writer := utils.GetWriter(d.OutPath)
 	d.output = writer
