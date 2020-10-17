@@ -34,7 +34,7 @@ func (cc *CQConfig) sendGroupMsg(msg *CQMsg) {
 }
 
 type PluginCQBot struct {
-	sentMsg map[string]int
+	sentMsg map[string]map[int]int
 }
 
 func CreateLiveMsg(v *interfaces.VideoInfo) string {
@@ -50,7 +50,7 @@ type CQJsonConfig struct {
 
 func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 	if p.sentMsg == nil {
-		p.sentMsg = make(map[string]int)
+		p.sentMsg = make(map[string]map[int]int)
 	}
 	video := process.LiveStatus.Video
 	config := CQJsonConfig{}
@@ -69,22 +69,23 @@ func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 	}
 
 	msg := CreateLiveMsg(video)
-	_, ok = p.sentMsg[msg]
-	if ok {
-		log.Infof("%s|%s cancel to send msg: %s", video.Provider, video.UsersConfig.Name, msg)
-		return nil
-	}
 	c := &CQMsg{Message: msg}
 	cc := &CQConfig{
 		CQHost:  config.CQHost,
 		CQToken: config.CQToken,
 	}
 	for _, GroupId := range config.QQGroupID {
+		sentGroupIds := p.sentMsg[msg]
+		_, ok = sentGroupIds[GroupId]
+		if ok {
+			log.Infof("%s|%s cancel to send msg: %s", video.Provider, video.UsersConfig.Name, msg)
+			continue
+		}
 		c.GroupId = GroupId
 		cc.sendGroupMsg(c)
 		log.Infof("%s|%s send notice to %d", video.Provider, video.UsersConfig.Name, GroupId)
+		p.sentMsg[msg][GroupId] = 1
 	}
-	p.sentMsg[msg] = 1
 	return nil
 }
 
