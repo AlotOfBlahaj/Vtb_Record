@@ -25,34 +25,34 @@ type Youtube struct {
 	usersConfig config.UsersConfig
 }
 
-func getVideoInfo(ctx *base.MonitorCtx, base string, channelId string) (*bilibili.LiveInfo, error) {
-	url := base + "/channel/" + channelId + "/live"
-	htmlBody, err := ctx.HttpGet(url, map[string]string{})
+func (y *Youtube) getVideoInfo() error {
+	url := "https://www.youtube.com" + "/channel/" + y.usersConfig.TargetId + "/live"
+	htmlBody, err := y.Ctx.HttpGet(url, map[string]string{})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	re, _ := regexp.Compile(`ytplayer.config\s*=\s*([^\n]+?});`)
 	result := re.FindSubmatch(htmlBody)
 	if len(result) < 2 {
-		return nil, fmt.Errorf("youtube cannot find js_data")
+		return fmt.Errorf("youtube cannot find js_data")
 	}
 	jsonYtConfig := result[1]
 	playerResponse := gjson.GetBytes(jsonYtConfig, "args.player_response")
 	if !playerResponse.Exists() {
-		return nil, fmt.Errorf("youtube cannot find player_response")
+		return fmt.Errorf("youtube cannot find player_response")
 	}
 	videoDetails := gjson.Get(playerResponse.String(), "videoDetails")
 	if !playerResponse.Exists() {
-		return nil, fmt.Errorf("youtube cannot find videoDetails")
+		return fmt.Errorf("youtube cannot find videoDetails")
 	}
 	IsLive := videoDetails.Get("isLive").Bool()
 	if !IsLive {
-		return nil, err
+		return err
 	} else {
-		return &bilibili.LiveInfo{
-			Title:         videoDetails.Get("title").String(),
-			StreamingLink: "https://www.youtube.com/watch?v=" + videoDetails.Get("videoId").String(),
-		}, nil
+		y.Title = videoDetails.Get("title").String()
+		y.Target = "https://www.youtube.com/watch?v=" + videoDetails.Get("videoId").String()
+		y.IsLive = IsLive
+		return nil
 	}
 	//return nil, nil
 	//log.Printf("%+v", y)
@@ -281,7 +281,7 @@ func (y *Youtube) CreateVideo(usersConfig config.UsersConfig) *interfaces.VideoI
 }
 func (y *Youtube) CheckLive(usersConfig config.UsersConfig) bool {
 	y.usersConfig = usersConfig
-	err := y.getVideoInfoByPoll()
+	err := y.getVideoInfo()
 	if err != nil {
 		y.IsLive = false
 	}
