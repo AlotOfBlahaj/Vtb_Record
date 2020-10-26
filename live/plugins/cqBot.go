@@ -82,7 +82,7 @@ func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 			continue
 		}
 		c.GroupId = GroupId
-		//cc.sendGroupMsg(c)
+		cc.sendGroupMsg(c)
 		log.Infof("%s|%s send notice to %d", video.Provider, video.UsersConfig.Name, GroupId)
 		if sentGroupIds == nil {
 			p.sentMsg[msg] = make(map[int]int)
