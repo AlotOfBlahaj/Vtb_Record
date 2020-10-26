@@ -70,10 +70,10 @@ func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 
 	msg := CreateLiveMsg(video)
 	c := &CQMsg{Message: msg}
-	//cc := &CQConfig{
-	//	CQHost:  config.CQHost,
-	//	CQToken: config.CQToken,
-	//}
+	cc := &CQConfig{
+		CQHost:  config.CQHost,
+		CQToken: config.CQToken,
+	}
 	for _, GroupId := range config.QQGroupID {
 		sentGroupIds := p.sentMsg[msg]
 		_, ok = sentGroupIds[GroupId]
