@@ -198,23 +198,34 @@ func main() {
 				addrs := []string{"private.googleapis.com:443", "www.googleapis.com:443"}
 				addr = addrs[rand.Intn(len(addrs))]
 			}*/
-			isNumber := false
+			needLB := true // do we need to load balance? we do it in a opt-out fashion
 			if _, err := strconv.Atoi(addr[0:1]); err == nil {
-				isNumber = true
+				// is it an IP Address?
+				needLB = false
 			}
-			if !isNumber && config.Config.OutboundAddrs != nil && len(config.Config.OutboundAddrs) > 0 {
-				outIp := utils.RandChooseStr(config.Config.OutboundAddrs)
-				return (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-					LocalAddr: &net.TCPAddr{
-						IP:   net.ParseIP(outIp),
-						Port: 0,
-					},
-				}).DialContext(ctx, network, addr)
-			} else {
-				return net.Dial(network, addr)
+			if config.Config.OutboundAddrs != nil && len(config.Config.OutboundAddrs) > 0 {
+				var outIp string
+
+				if addr == "STICKY_IP" {
+					outIp = config.Config.OutboundAddrs[0]
+					addr = _addr // revert to original ip
+				} else if needLB {
+					outIp = utils.RandChooseStr(config.Config.OutboundAddrs)
+				} else {
+					outIp = ""
+				}
+				if outIp != "" {
+					return (&net.Dialer{
+						Timeout:   30 * time.Second,
+						KeepAlive: 30 * time.Second,
+						LocalAddr: &net.TCPAddr{
+							IP:   net.ParseIP(outIp),
+							Port: 0,
+						},
+					}).DialContext(ctx, network, addr)
+				}
 			}
+			return net.Dial(network, addr)
 		},
 	}
 
