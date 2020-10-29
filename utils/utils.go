@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/fzxiao233/Go-Emoji-Utils"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -167,7 +166,8 @@ func GetTimeNow() string {
 }
 func RemoveIllegalChar(Title string) string {
 	illegalChars := []string{"|", "/", "\\", ":", "?"}
-	Title = emoji.RemoveAll(Title)
+	//"github.com/fzxiao233/Go-Emoji-Utils"
+	//Title = emoji.RemoveAll(Title)
 	for _, char := range illegalChars {
 		Title = strings.ReplaceAll(Title, char, "#")
 	}
