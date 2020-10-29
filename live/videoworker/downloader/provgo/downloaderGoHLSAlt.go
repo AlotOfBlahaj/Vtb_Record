@@ -361,7 +361,7 @@ func (d *HLSDownloader) AltWriter() {
 			max = v.(int)
 		}
 	}
-	d.Logger.Infof("Got tail segs: %s, key max: %d, min %d", segs, max, min)
+	d.Logger.Infof("Got tail segs: %v, key max: %d, min %d", segs, max, min)
 
 	// sometimes the cdn will reset everything back to 1 and then restart, so after wrote the
 	// last segments, we try to write the first parts

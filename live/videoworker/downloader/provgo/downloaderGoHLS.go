@@ -381,7 +381,7 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 	var curHeader map[string]string
 	curUrl, curHeader = d.getHLSUrl(isAlt)
 	if curUrl == "" {
-		logger.Infof("got empty m3u8 url", curUrl)
+		logger.Infof("got empty m3u8 url")
 		d.forceRefresh(isAlt)
 		time.Sleep(10 * time.Second)
 		return nil
