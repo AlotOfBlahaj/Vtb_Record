@@ -25,4 +25,4 @@ jobs:
           DATASTORE_AUTH: ${{ secrets.DATASTORE_AUTH }}
         run: |
           curl -O -H "Authorization: $DATASTORE_AUTH" "http://vtbrecorder.misty.moe:22334/config_test.json"
-          go test ./... -config `pwd`/config_test.json
+          go test ./... -config `pwd`/config_test.json -vet=off
