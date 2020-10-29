@@ -73,7 +73,7 @@ func (d *HLSDownloader) handleAltSegment(segData *HLSSegment) (bool, []error) {
 		onlyAlt = true
 	}*/
 	i := 0
-	clients := d.allClients
+	clients := d.Clients
 	if onlyAlt {
 		clients = d.AltClients
 		if len(clients) == 0 {
@@ -120,12 +120,12 @@ breakout:
 			round++
 		}
 		if round == 2 {
-			logger.Warnf("Failed to download alt segment %d after 2 round, giving up", segData.SegNo)
+			logger.WithField("errors", errs).Warnf("Failed to download alt segment %d after 2 round, giving up", segData.SegNo)
 			errMutex.Lock()
 			reterr := make([]error, len(errs))
 			copy(reterr, errs)
 			errMutex.Unlock()
-			return true, errs // true but not setting segment, so not got removed
+			return true, reterr // true but not setting segment, so not got removed
 		}
 	}
 	return true, nil
@@ -173,7 +173,7 @@ func (d *HLSDownloader) AltWorker() {
 		case _ = <-ticker.C:
 
 		case _ = <-d.altforceRefreshChan:
-			logger.Info("Got forceRefresh signal, refresh at once!")
+			logger.Info("Got altforceRefresh signal, refresh at once!")
 			isClose := false
 			func() {
 				defer func() {
