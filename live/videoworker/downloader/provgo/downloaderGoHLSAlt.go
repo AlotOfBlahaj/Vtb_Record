@@ -136,7 +136,7 @@ func (d *HLSDownloader) AltDownloader() {
 	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 	for {
-		err := d.m3u8Handler(true)
+		err := d.m3u8Handler(true, d)
 		if err != nil {
 			if strings.Contains(err.Error(), "aborting") { // for aborting errors, we sleep for a while to avoid too much error
 				time.Sleep(10 * time.Second)

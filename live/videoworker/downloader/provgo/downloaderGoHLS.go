@@ -210,7 +210,8 @@ const (
 )
 
 // parse the m3u8 file to get segment number and url
-func (d *HLSDownloader) m3u8Parser(logger *log.Entry, parsedurl *url.URL, m3u8 string, isAlt bool) (status ParserStatus, additionalData interface{}) {
+func (d *HLSDownloader) m3u8Parser(parsedurl *url.URL, m3u8 string, isAlt bool) (status ParserStatus, additionalData interface{}) {
+	logger := d.Logger.WithField("alt", isAlt)
 	relaUrl := "http" + "://" + parsedurl.Host + path.Dir(parsedurl.Path)
 	hostUrl := "http" + "://" + parsedurl.Host
 	// if url is /XXX.ts, then it's related to host, if the url is XXX.ts, then it's related to url path
@@ -340,8 +341,12 @@ func (d *HLSDownloader) setHLSUrl(isAlt bool, curUrl string, curHeader map[strin
 	return
 }
 
+type M3u8ParserCallback interface {
+	m3u8Parser(parsedurl *url.URL, m3u8 string, isAlt bool) (status ParserStatus, additionalData interface{})
+}
+
 // the core worker that download the m3u8 file
-func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
+func (d *HLSDownloader) m3u8Handler(isAlt bool, parser M3u8ParserCallback) error {
 	var err error
 	logger := d.Logger.WithField("alt", isAlt)
 
@@ -439,7 +444,8 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 				//logger.Debugf("Downloaded m3u8 in %s", time.Now().Sub(start))
 				m3u8 := string(_m3u8)
 				m3u8parsedurl, _ := url.Parse(m3u8CurUrl)
-				ret, info := d.m3u8Parser(logger, m3u8parsedurl, m3u8, isAlt)
+				//ret, info := d.m3u8Parser(m3u8parsedurl, m3u8, isAlt)
+				ret, info := parser.m3u8Parser(m3u8parsedurl, m3u8, isAlt)
 				if ret == Parser_REDIRECT {
 					newUrl := info.(string)
 					log.Tracef("Got redirect to %s!", newUrl)
@@ -510,7 +516,7 @@ func (d *HLSDownloader) Downloader() {
 	breakflag := false
 	for {
 		go func() {
-			err := d.m3u8Handler(false)
+			err := d.m3u8Handler(false, d)
 			if err != nil {
 				d.sendErr(err) // we have error, break out now
 				breakflag = true
