@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"flag"
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live"
@@ -13,7 +12,6 @@ import (
 	rconfig "github.com/rclone/rclone/fs/config"
 	"github.com/rclone/rclone/fs/operations"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"io"
 	"math/rand"
 	"net"
@@ -306,10 +304,14 @@ func main() {
 	fs.Config.TPSLimit = 0
 	fs.Config.LowLevelRetries = 120
 	//fs.Config.NoGzip = false
-	confPath := flag.String("config", "config.json", "config.json location")
-	flag.Parse()
-	viper.SetConfigFile(*confPath)
-	config.InitConfig()
+
+	// moved to config package
+	//confPath := flag.String("config", "config.json", "config.json location")
+	//flag.Parse()
+	//viper.SetConfigFile(*confPath)
+	//config.InitConfig()
+	config.PrepareConfig()
+
 	config.InitLog()
 	go config.InitProfiling()
 	arrangeTask()

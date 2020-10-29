@@ -1,6 +1,7 @@
 package config
 
 import (
+	"flag"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
@@ -163,4 +164,11 @@ func UpdateLogLevel() {
 		ConsoleHook.LogLevel = level
 		logrus.Printf("Set logrus console level to %s", level)
 	}
+}
+
+func PrepareConfig() {
+	confPath := flag.String("config", "config.json", "config.json location")
+	flag.Parse()
+	viper.SetConfigFile(*confPath)
+	InitConfig()
 }

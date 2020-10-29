@@ -23,13 +23,8 @@ type Bilibili struct {
 	streamingLink string
 }
 
-type LiveInfo struct {
-	Title         string
-	StreamingLink string
-}
-
 type BilibiliPoller struct {
-	LivingUids map[int]LiveInfo
+	LivingUids map[int]base.LiveInfo
 	lock       sync.Mutex
 }
 
@@ -49,7 +44,7 @@ func (b *BilibiliPoller) getStatusUseFollow() error {
 		url = "https://api.live.bilibili.com"
 	}
 
-	livingUids := make(map[int]LiveInfo)
+	livingUids := make(map[int]base.LiveInfo)
 	retrivePage := func(page int) (bool, error) {
 		rawInfoJSON, err := ctx.HttpGet(
 			fmt.Sprintf("%s/xlive/web-ucenter/user/following?page=%d&page_size=10", url, page),
@@ -70,7 +65,7 @@ func (b *BilibiliPoller) getStatusUseFollow() error {
 				break
 			}
 			liveUrl := fmt.Sprintf("https://live.bilibili.com/%d", user.Get("roomid").MustInt())
-			livingUids[user.Get("uid").MustInt()] = LiveInfo{
+			livingUids[user.Get("uid").MustInt()] = base.LiveInfo{
 				Title:         user.Get("title").MustString(),
 				StreamingLink: liveUrl,
 			}
@@ -129,7 +124,7 @@ func (b *BilibiliPoller) getStatusUseBatch() error {
 		allUids = append(allUids, u.TargetId)
 	}
 	rand.Shuffle(len(allUids), func(i, j int) { allUids[i], allUids[j] = allUids[j], allUids[i] })
-	livingUids := make(map[int]LiveInfo)
+	livingUids := make(map[int]base.LiveInfo)
 	for i := 0; i < len(allUids); i += 200 {
 		payload := fmt.Sprintf("%s/room/v1/Room/get_status_info_by_uids?uids[]=%s",
 			url,
@@ -145,7 +140,7 @@ func (b *BilibiliPoller) getStatusUseBatch() error {
 			user := users.Get(uid)
 			if user.Get("live_status").MustInt() == 1 {
 				liveUrl := fmt.Sprintf("https://live.bilibili.com/%d", user.Get("room_id").MustInt())
-				livingUids[user.Get("uid").MustInt()] = LiveInfo{
+				livingUids[user.Get("uid").MustInt()] = base.LiveInfo{
 					Title:         user.Get("title").MustString(),
 					StreamingLink: liveUrl,
 				}
@@ -184,7 +179,7 @@ func (b *BilibiliPoller) StartPoll() error {
 	return nil
 }
 
-func (b *BilibiliPoller) IsLiving(uid int) *LiveInfo {
+func (b *BilibiliPoller) IsLiving(uid int) *base.LiveInfo {
 	b.lock.Lock()
 	if b.LivingUids == nil {
 		err := b.StartPoll()
