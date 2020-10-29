@@ -63,13 +63,19 @@ func HttpGetBufferEx(ctx context.Context, client *http.Client, url string, heade
 	}
 
 	if res.StatusCode != 200 && res.StatusCode != 206 {
-		err = fmt.Errorf("HttpGet status code error %d", res.StatusCode)
-		//log.Warn(err)
-		return nil, err
+		if res.StatusCode == 404 {
+			err = fmt.Errorf("HttpGet status error %d", res.StatusCode)
+			return nil, err
+		} else {
+			//buf := bytes.NewBuffer(make([]byte, 0))
+			//_, _ = io.Copy(buf, res.Body)
+			err = fmt.Errorf("HttpGet status error %d with header %v", res.StatusCode, req.Header) //, string(buf.Bytes()))
+			//log.Warn(err)
+			return nil, err
+		}
 	}
 
 	//log.Infof("%v", res.ContentLength)
-
 	//var htmlBody []byte
 	if res.ContentLength >= 0 {
 		if buf == nil {
