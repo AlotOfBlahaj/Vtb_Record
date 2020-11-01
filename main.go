@@ -8,6 +8,8 @@ import (
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
+	"github.com/fzxiao233/Vtb_Record/live/plugins"
+	"github.com/fzxiao233/Vtb_Record/live/videoworker"
 	"github.com/fzxiao233/Vtb_Record/utils"
 	"github.com/rclone/rclone/fs"
 	rconfig "github.com/rclone/rclone/fs/config"
@@ -28,8 +30,15 @@ import (
 
 var SafeStop bool
 
+func initPluginManager() videoworker.PluginManager {
+	pm := videoworker.PluginManager{}
+	pm.AddPlugin(&plugins.PluginCQBot{})
+	return pm
+}
+
 func arrangeTask() {
 	log.Printf("Arrange tasks...")
+	pm := initPluginManager()
 	status := make([]map[string]bool, len(config.Config.Module))
 	for i, module := range config.Config.Module {
 		status[i] = make(map[string]bool, len(module.Users))
@@ -95,7 +104,7 @@ func arrangeTask() {
 					statusMx.Unlock()
 					changed = append(changed, identifier)
 					go func(i int, j string, mon monitor.VideoMonitor, userCon config.UsersConfig) {
-						live.StartMonitor(mon, userCon)
+						live.StartMonitor(mon, userCon, pm)
 						statusMx.Lock()
 						status[i][j] = false
 						statusMx.Unlock()
