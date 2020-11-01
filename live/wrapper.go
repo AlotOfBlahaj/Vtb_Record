@@ -5,15 +5,12 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	"github.com/fzxiao233/Vtb_Record/live/monitor/base"
-	"github.com/fzxiao233/Vtb_Record/live/plugins"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
 )
 
-func StartMonitor(mon base.VideoMonitor, usersConfig config.UsersConfig) {
+func StartMonitor(mon base.VideoMonitor, usersConfig config.UsersConfig, pm videoworker.PluginManager) {
 	//ticker := time.NewTicker(time.Second * time.Duration(utils.Config.CheckSec))
 	//for {
-	pm := videoworker.PluginManager{}
-	pm.AddPlugin(&plugins.PluginCQBot{})
 	//pm.AddPlugin(&plugins.PluginTranslationRecorder{})
 	//pm.AddPlugin(&plugins.PluginUploader{})
 

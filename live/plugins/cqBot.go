@@ -70,23 +70,24 @@ func (p *PluginCQBot) LiveStart(process *videoworker.ProcessVideo) error {
 
 	msg := CreateLiveMsg(video)
 	c := &CQMsg{Message: msg}
-	cc := &CQConfig{
-		CQHost:  config.CQHost,
-		CQToken: config.CQToken,
-	}
+	//cc := &CQConfig{
+	//	CQHost:  config.CQHost,
+	//	CQToken: config.CQToken,
+	//}
 	for _, GroupId := range config.QQGroupID {
 		sentGroupIds := p.sentMsg[msg]
+		if sentGroupIds == nil {
+			p.sentMsg[msg] = make(map[int]int)
+		}
 		_, ok = sentGroupIds[GroupId]
 		if ok {
 			log.Infof("%s|%s cancel to send msg: %s", video.Provider, video.UsersConfig.Name, msg)
 			continue
 		}
 		c.GroupId = GroupId
-		cc.sendGroupMsg(c)
+		//cc.sendGroupMsg(c)
 		log.Infof("%s|%s send notice to %d", video.Provider, video.UsersConfig.Name, GroupId)
-		if sentGroupIds == nil {
-			p.sentMsg[msg] = make(map[int]int)
-		}
+
 		p.sentMsg[msg][GroupId] = 1
 	}
 	return nil
