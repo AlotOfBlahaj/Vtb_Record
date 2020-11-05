@@ -73,7 +73,7 @@ func (d *HLSDownloader) handleAltSegment(segData *HLSSegment) (bool, []error) {
 		onlyAlt = true
 	}*/
 	i := 0
-	clients := d.allClients
+	clients := d.Clients
 	if onlyAlt {
 		clients = d.AltClients
 		if len(clients) == 0 {
@@ -120,12 +120,12 @@ breakout:
 			round++
 		}
 		if round == 2 {
-			logger.Warnf("Failed to download alt segment %d after 2 round, giving up", segData.SegNo)
+			logger.WithField("errors", errs).Warnf("Failed to download alt segment %d after 2 round, giving up", segData.SegNo)
 			errMutex.Lock()
 			reterr := make([]error, len(errs))
 			copy(reterr, errs)
 			errMutex.Unlock()
-			return true, errs // true but not setting segment, so not got removed
+			return true, reterr // true but not setting segment, so not got removed
 		}
 	}
 	return true, nil
@@ -136,7 +136,7 @@ func (d *HLSDownloader) AltDownloader() {
 	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 	for {
-		err := d.m3u8Handler(true)
+		err := d.m3u8Handler(true, d)
 		if err != nil {
 			if strings.Contains(err.Error(), "aborting") { // for aborting errors, we sleep for a while to avoid too much error
 				time.Sleep(10 * time.Second)
@@ -173,7 +173,7 @@ func (d *HLSDownloader) AltWorker() {
 		case _ = <-ticker.C:
 
 		case _ = <-d.altforceRefreshChan:
-			logger.Info("Got forceRefresh signal, refresh at once!")
+			logger.Info("Got altforceRefresh signal, refresh at once!")
 			isClose := false
 			func() {
 				defer func() {
@@ -361,7 +361,7 @@ func (d *HLSDownloader) AltWriter() {
 			max = v.(int)
 		}
 	}
-	d.Logger.Infof("Got tail segs: %s, key max: %d, min %d", segs, max, min)
+	d.Logger.Infof("Got tail segs: %v, key max: %d, min %d", segs, max, min)
 
 	// sometimes the cdn will reset everything back to 1 and then restart, so after wrote the
 	// last segments, we try to write the first parts

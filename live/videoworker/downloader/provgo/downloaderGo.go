@@ -146,6 +146,7 @@ func (d *DownloaderGo) StartDownload(video *interfaces.VideoInfo, proxy string, 
 			needAbort, err, infoJson = updateInfo(video, proxy, cookie, true)
 		}
 		if needAbort {
+			// if we didn't entered live
 			logger.Warnf("Streamlink requested to abort because: %s", err)
 			panic("forceabort")
 		}
@@ -178,8 +179,8 @@ func (d *DownloaderGo) StartDownload(video *interfaces.VideoInfo, proxy string, 
 					if strings.Contains(url, "gotcha103") {
 						//fuck qiniu
 						//entry.Errorf("Not supporting qiniu cdn... %s", m3u8url)
-						logger.Warnf("Not supporting qiniu cdn... %s", url)
-						continue
+						logger.Warnf("We're getting qiniu cdn... %s, having shitty downloading experiences", url)
+						//continue
 					}
 					logger.Infof("start to download hls stream %s", url)
 					return d.doDownloadHls(logger, filepath, video, url, headers, needMove)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	m3u8Parser "github.com/etherlabsio/go-m3u8/m3u8"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker/downloader/stealth"
 	"github.com/fzxiao233/Vtb_Record/utils"
@@ -61,6 +62,7 @@ type HLSDownloader struct {
 	segRl      ratelimit.Limiter
 
 	firstSeqChan chan int
+	hasAlt       bool
 
 	errChan    chan error
 	alterrChan chan error
@@ -78,19 +80,15 @@ var bufPool bytebufferpool.Pool
 
 var IsStub = false
 
-func (d *HLSDownloader) handleSegment(segData *HLSSegment) bool {
-	return d._handleSegment(segData, false)
-}
-
 // download each segment
-func (d *HLSDownloader) _handleSegment(segData *HLSSegment, isAlt bool) bool {
+func (d *HLSDownloader) handleSegment(segData *HLSSegment) bool {
 	// rate limit the download speed...
 	d.segRl.Take()
 	if IsStub {
 		return true
 	}
 
-	logger := d.Logger.WithField("alt", isAlt)
+	logger := d.Logger.WithField("alt", false)
 
 	// download using a client
 	downChan := make(chan *bytes.Buffer)
@@ -100,19 +98,11 @@ func (d *HLSDownloader) _handleSegment(segData *HLSSegment, isAlt bool) bool {
 		}()
 		close(downChan)
 	}()
-	errs := []error{}
-	errMutex := sync.Mutex{}
 	doDownload := func(client *http.Client) {
 		s := time.Now()
 		newbuf, err := utils.HttpGetBuffer(client, segData.Url, d.HLSHeader, nil)
 		if err != nil {
-			if isAlt {
-				errMutex.Lock()
-				errs = append(errs, err)
-				errMutex.Unlock()
-			} else {
-				logger.WithError(err).Infof("Err when download segment %s", segData.Url)
-			}
+			logger.WithError(err).Infof("Err when download segment %s", segData.Url)
 			// if it's 404, then we'll never be able to download it later, stop the useless retry
 			if strings.HasSuffix(err.Error(), "404") {
 				func() {
@@ -197,19 +187,12 @@ breakout:
 			logger.Warnf("Failed all-clients to download segment %d", segData.SegNo)
 			round++
 		}
-		if isAlt {
-			// for alt seg, we needn't too much retry as they are already the retry itself
-			if round == 2 {
-				logger.WithField("errors", errs).Warnf("Failed to download alt segment %d after 2 round, giving up")
-				return true // true but not setting segment, so not got removed
-			}
-		}
 		if time.Now().Sub(segData.SegArriveTime) > 300*time.Second {
 			logger.Warnf("Failed to download segment %d within timeout...", segData.SegNo)
 			return false
 		}
 	}
-	if round > 0 || isAlt {
+	if round > 0 {
 		// log the too long seg download and alt seg download
 		logger.Infof("Downloaded segment %d: len %v", segData.SegNo, segData.Data.Len())
 	} else {
@@ -218,8 +201,17 @@ breakout:
 	return true
 }
 
+type ParserStatus int32
+
+const (
+	Parser_OK       ParserStatus = 0
+	Parser_FAIL     ParserStatus = 1
+	Parser_REDIRECT ParserStatus = 2
+)
+
 // parse the m3u8 file to get segment number and url
-func (d *HLSDownloader) m3u8Parser(logger *log.Entry, parsedurl *url.URL, m3u8 string, isAlt bool) bool {
+func (d *HLSDownloader) m3u8Parser(parsedurl *url.URL, m3u8 string, isAlt bool) (status ParserStatus, additionalData interface{}) {
+	logger := d.Logger.WithField("alt", isAlt)
 	relaUrl := "http" + "://" + parsedurl.Host + path.Dir(parsedurl.Path)
 	hostUrl := "http" + "://" + parsedurl.Host
 	// if url is /XXX.ts, then it's related to host, if the url is XXX.ts, then it's related to url path
@@ -233,55 +225,46 @@ func (d *HLSDownloader) m3u8Parser(logger *log.Entry, parsedurl *url.URL, m3u8 s
 		}
 	}
 
-	m3u8lines := strings.Split(m3u8, "\n")
-	if m3u8lines[0] != "#EXTM3U" {
-		logger.Warnf("Failed to parse m3u8, expected %s, got %s", "#EXTM3U", m3u8lines[0])
-		return false
+	playlist, err := m3u8Parser.ReadString(m3u8)
+	if err != nil {
+		return Parser_FAIL, err
 	}
 
-	curseq := -1
-	segs := make([]string, 0)
-	i := 0
-	finished := false
-	for {
-		i += 1
-		if i >= len(m3u8lines) {
-			break
-		}
-		line := m3u8lines[i]
-		if strings.HasPrefix(line, "#EXT-X-MEDIA-SEQUENCE") {
-			_, _, val := utils.RPartition(line, ":")
-			_seq, err := strconv.Atoi(val)
-			if err != nil {
-				logger.Warnf("EXT-X-MEDIA-SEQUENCE malformed: %s", line)
-				continue
-			}
-			curseq = _seq
-		} else if strings.HasPrefix(line, "#EXTINF:") {
-			//logger.Debugf("Got seg %d %s", curseq+len(segs), m3u8lines[i+1])
-			seglen, err := strconv.ParseFloat(strings.TrimSuffix(line[8:], ","), 64)
-			if err != nil {
-				d.Logger.Infof("Failed to parse seglen %s", err)
-			} else {
-				d.SegLen = seglen
-			}
-			segs = append(segs, m3u8lines[i+1])
-			i += 1
-		} else if strings.HasPrefix(line, "#EXT-X-ENDLIST") {
-			logger.Trace("Got HLS end mark!")
-			finished = true
-		} else if line == "" || strings.HasPrefix(line, "#EXT-X-VERSION") ||
-			strings.HasPrefix(line, "#EXT-X-ALLOW-CACHE") ||
-			strings.HasPrefix(line, "#EXT-X-TARGETDURATION") {
-		} else {
-			logger.Tracef("Ignored line: %s", line)
-		}
-	}
+	curseq := playlist.Sequence
 
 	if curseq == -1 {
 		// curseq parse failed
 		logger.Warnf("curseq parse failed!!!")
-		return false
+		return Parser_FAIL, nil
+	}
+
+	segs := make([]string, 0)
+
+	seg_i := 0
+	for _, _item := range playlist.Items {
+		switch item := _item.(type) {
+		case *m3u8Parser.PlaylistItem:
+			//log.Debugf("Got redirect m3u8, redirecting to %s", item.URI)
+			return Parser_REDIRECT, item.URI
+		case *m3u8Parser.SegmentItem:
+			seqNo := curseq + seg_i
+			if playlist.IsLive() && seg_i == 0 {
+				d.SegLen = item.Duration
+			}
+			seg_i += 1
+			segs = append(segs, item.Segment)
+
+			if !isAlt {
+				_segData, loaded := d.SeqMap.LoadOrStore(seqNo, &HLSSegment{SegNo: seqNo, SegArriveTime: time.Now(), Url: getSegUrl(item.Segment)})
+				if !loaded {
+					segData := _segData.(*HLSSegment)
+					logger.Debugf("Got new seg %d %s", seqNo, segData.Url)
+					go d.handleSegment(segData)
+				}
+			} else {
+				d.AltSeqMap.PeekOrAdd(seqNo, &HLSSegment{SegNo: seqNo, SegArriveTime: time.Now(), Url: getSegUrl(item.Segment)})
+			}
+		}
 	}
 	if !isAlt && d.firstSeqChan != nil {
 		d.firstSeqChan <- curseq
@@ -290,23 +273,11 @@ func (d *HLSDownloader) m3u8Parser(logger *log.Entry, parsedurl *url.URL, m3u8 s
 	if !isAlt {
 		d.lastSeqNo = curseq + len(segs)
 	}
-	for i, seg := range segs {
-		seqNo := curseq + i
-		if !isAlt {
-			_segData, loaded := d.SeqMap.LoadOrStore(curseq+i, &HLSSegment{SegNo: seqNo, SegArriveTime: time.Now(), Url: getSegUrl(seg)})
-			if !loaded {
-				segData := _segData.(*HLSSegment)
-				logger.Debugf("Got new seg %d %s", seqNo, segData.Url)
-				go d.handleSegment(segData)
-			}
-		} else {
-			d.AltSeqMap.PeekOrAdd(curseq+i, &HLSSegment{SegNo: seqNo, SegArriveTime: time.Now(), Url: getSegUrl(seg)})
-		}
-	}
-	if finished {
+	if !playlist.IsLive() {
 		d.FinishSeq = curseq + len(segs) - 1
 	}
-	return true
+
+	return Parser_OK, nil
 }
 
 func (d *HLSDownloader) forceRefresh(isAlt bool) {
@@ -336,8 +307,46 @@ func (d *HLSDownloader) sendErr(err error) {
 	ch <- err
 }
 
+func (d *HLSDownloader) getHLSUrl(isAlt bool) (curUrl string, curHeader map[string]string) {
+	if !isAlt {
+		d.UrlUpdating.Lock()
+		curUrl = d.HLSUrl
+		curHeader = d.HLSHeader
+		d.UrlUpdating.Unlock()
+	} else {
+		d.AltUrlUpdating.Lock()
+		curUrl = d.AltHLSUrl
+		curHeader = d.AltHLSHeader
+		d.AltUrlUpdating.Unlock()
+	}
+	return
+}
+
+func (d *HLSDownloader) setHLSUrl(isAlt bool, curUrl string, curHeader map[string]string) {
+	if !isAlt {
+		d.UrlUpdating.Lock()
+		d.HLSUrl = curUrl
+		if curHeader != nil {
+			d.HLSHeader = curHeader
+		}
+		d.UrlUpdating.Unlock()
+	} else {
+		d.AltUrlUpdating.Lock()
+		d.AltHLSUrl = curUrl
+		if curHeader != nil {
+			d.AltHLSHeader = curHeader
+		}
+		d.AltUrlUpdating.Unlock()
+	}
+	return
+}
+
+type M3u8ParserCallback interface {
+	m3u8Parser(parsedurl *url.URL, m3u8 string, isAlt bool) (status ParserStatus, additionalData interface{})
+}
+
 // the core worker that download the m3u8 file
-func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
+func (d *HLSDownloader) m3u8Handler(isAlt bool, parser M3u8ParserCallback) error {
 	var err error
 	logger := d.Logger.WithField("alt", isAlt)
 
@@ -347,16 +356,13 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 		errCache = d.altdownloadErr
 	}
 	errCache.DeleteExpired()
-	if errCache.ItemCount() >= 3 {
+	if errCache.ItemCount() >= 5 {
 		errs := make([]interface{}, 0, 10)
 		for _, e := range errCache.Items() {
 			errs = append(errs, e)
 		}
 		errCache.Flush()
-		url := d.HLSUrl
-		if isAlt {
-			url = d.AltHLSUrl
-		}
+		url, _ := d.getHLSUrl(isAlt)
 		logger.WithField("errors", errs).Warnf("Too many err occured downloading %s, refreshing m3u8url...", url)
 		d.forceRefresh(isAlt)
 		//time.Sleep(5 * time.Second)
@@ -378,24 +384,14 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 	// prepare the url
 	var curUrl string
 	var curHeader map[string]string
-	if !isAlt {
-		d.UrlUpdating.Lock()
-		curUrl = d.HLSUrl
-		curHeader = d.HLSHeader
-		d.UrlUpdating.Unlock()
-	} else {
-		d.AltUrlUpdating.Lock()
-		curUrl = d.AltHLSUrl
-		curHeader = d.AltHLSHeader
-		d.AltUrlUpdating.Unlock()
-	}
+	curUrl, curHeader = d.getHLSUrl(isAlt)
 	if curUrl == "" {
-		logger.Infof("got empty m3u8 url", curUrl)
+		logger.Infof("got empty m3u8 url")
 		d.forceRefresh(isAlt)
 		time.Sleep(10 * time.Second)
 		return nil
 	}
-	parsedurl, err := url.Parse(curUrl)
+	_, err = url.Parse(curUrl)
 	if err != nil {
 		logger.WithError(err).Warnf("m3u8 url parse fail")
 		d.forceRefresh(isAlt)
@@ -406,15 +402,35 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 
 	// request the m3u8
 	doQuery := func(client *http.Client) {
-		if _, ok := curHeader["Accept-Encoding"]; ok { // if there's custom Accept-Encoding, http.Client won't process them for us
-			delete(curHeader, "Accept-Encoding")
-		}
-		_m3u8, err := utils.HttpGet(client, curUrl, curHeader)
-		if err != nil {
-			d.M3U8UrlRewriter.Callback(curUrl, err)
-			logger.WithError(err).Debugf("Download m3u8 failed")
-			// if it's 404, then we need to abort
-			if strings.HasSuffix(err.Error(), "404") {
+		m3u8CurUrl := curUrl
+		for {
+			if _, ok := curHeader["Accept-Encoding"]; ok { // if there's custom Accept-Encoding, http.Client won't process them for us
+				delete(curHeader, "Accept-Encoding")
+			}
+			_m3u8, err := utils.HttpGet(client, m3u8CurUrl, curHeader)
+			if err != nil {
+				d.M3U8UrlRewriter.Callback(m3u8CurUrl, err)
+				logger.WithError(err).Debugf("Download m3u8 failed")
+				// if it's 404, then we need to abort
+				if strings.HasSuffix(err.Error(), "404") {
+					func() {
+						defer func() {
+							recover()
+						}()
+						ch := retchan
+						if ch == nil {
+							return
+						}
+						ch <- nil // abort!
+					}()
+				} else {
+					if !isAlt {
+						d.downloadErr.SetDefault(strconv.Itoa(int(time.Now().Unix())), err)
+					} else {
+						d.altdownloadErr.SetDefault(strconv.Itoa(int(time.Now().Unix())), err)
+					}
+				}
+			} else {
 				func() {
 					defer func() {
 						recover()
@@ -423,34 +439,26 @@ func (d *HLSDownloader) m3u8Handler(isAlt bool) error {
 					if ch == nil {
 						return
 					}
-					ch <- nil // abort!
+					ch <- _m3u8 // abort!
 				}()
-				return
-			}
-			if !isAlt {
-				d.downloadErr.SetDefault(strconv.Itoa(int(time.Now().Unix())), err)
-			} else {
-				d.altdownloadErr.SetDefault(strconv.Itoa(int(time.Now().Unix())), err)
-			}
-		} else {
-			func() {
-				defer func() {
-					recover()
-				}()
-				ch := retchan
-				if ch == nil {
-					return
+				//logger.Debugf("Downloaded m3u8 in %s", time.Now().Sub(start))
+				m3u8 := string(_m3u8)
+				m3u8parsedurl, _ := url.Parse(m3u8CurUrl)
+				//ret, info := d.m3u8Parser(m3u8parsedurl, m3u8, isAlt)
+				ret, info := parser.m3u8Parser(m3u8parsedurl, m3u8, isAlt)
+				if ret == Parser_REDIRECT {
+					newUrl := info.(string)
+					log.Tracef("Got redirect to %s!", newUrl)
+					m3u8CurUrl = newUrl
+					continue
+				} else if ret == Parser_OK {
+					// perfect!
+				} else {
+					// oh no
+					logger.Warnf("Failed to parse m3u8: %s", m3u8)
 				}
-				ch <- _m3u8 // abort!
-			}()
-			//logger.Debugf("Downloaded m3u8 in %s", time.Now().Sub(start))
-			m3u8 := string(_m3u8)
-			ret := d.m3u8Parser(logger, parsedurl, m3u8, isAlt)
-			if ret {
-				//
-			} else {
-				logger.Warnf("Failed to parse m3u8: %s", m3u8)
 			}
+			return
 		}
 	}
 
@@ -508,7 +516,7 @@ func (d *HLSDownloader) Downloader() {
 	breakflag := false
 	for {
 		go func() {
-			err := d.m3u8Handler(false)
+			err := d.m3u8Handler(false, d)
 			if err != nil {
 				d.sendErr(err) // we have error, break out now
 				breakflag = true
@@ -528,6 +536,9 @@ func (d *HLSDownloader) Downloader() {
 		if d.SegLen < curDuration {
 			ticker.Stop()
 			curDuration = d.SegLen * 0.8
+			if curDuration < 0.8 {
+				curDuration = 0.8
+			}
 			d.Logger.Infof("Using new hls interval: %f", curDuration)
 			ticker = time.NewTicker(time.Duration(float64(time.Second) * curDuration))
 		}
@@ -587,6 +598,8 @@ func (d *HLSDownloader) Worker() {
 			needAbort, err, infoJson := updateInfo(d.Video, "", d.Cookie, alt)
 			if needAbort {
 				d.Logger.WithError(err).Warnf("Streamlink requests to abort, worker finishing...")
+				// if we have entered live
+				d.sendErr(fmt.Errorf("Streamlink requests to abort: %s", err))
 				return
 			}
 			if err != nil {
@@ -743,13 +756,17 @@ func (d *HLSDownloader) startDownload() error {
 	d.downloadErr = cache.New(30*time.Second, 5*time.Minute)
 	d.altdownloadErr = cache.New(30*time.Second, 5*time.Minute)
 
-	hasAlt := false
+	d.hasAlt = false
 	if _, ok := d.Video.UsersConfig.ExtraConfig["AltStreamLinkArgs"]; ok {
-		hasAlt = true
+		d.hasAlt = true
+	}
+
+	if !d.hasAlt && d.AltAsMain {
+		return fmt.Errorf("Current live does not have alt source")
 	}
 
 	if IsStub {
-		hasAlt = false
+		d.hasAlt = false
 		go d.WriterStub()
 	} else {
 		go d.Writer()
@@ -758,7 +775,7 @@ func (d *HLSDownloader) startDownload() error {
 	go d.Downloader()
 	go d.Worker()
 
-	if hasAlt {
+	if !d.AltAsMain && d.hasAlt {
 		d.Logger.Infof("Use alt downloader")
 
 		// start the alt downloader 60 seconds later to avoid the burst query of streamlink
@@ -787,7 +804,7 @@ func (d *HLSDownloader) startDownload() error {
 		d.AltStopped = true
 	} else {
 		d.Logger.Infof("HLS Download failed: %s", err)
-		if hasAlt {
+		if d.hasAlt {
 			if usedTime > 1*time.Minute {
 				go d.AltWriter()
 			} else {

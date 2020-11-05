@@ -24,6 +24,9 @@ type WriterHook struct {
 // Fire will be called when some logging function is called with current hook
 // It will format logrus entry to string and write it to appropriate writer
 func (hook *WriterHook) Fire(entry *logrus.Entry) error {
+	if entry.Level > hook.LogLevel {
+		return nil
+	}
 	serialized, err := hook.Formatter.Format(entry)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to obtain reader, %v\n", err)
@@ -37,7 +40,8 @@ func (hook *WriterHook) Fire(entry *logrus.Entry) error {
 
 // Levels define on which logrus levels this hook would trigger
 func (hook *WriterHook) Levels() []logrus.Level {
-	return logrus.AllLevels[:hook.LogLevel+1]
+	//return logrus.AllLevels[:hook.LogLevel+1]
+	return logrus.AllLevels[:logrus.DebugLevel+1]
 }
 
 var ConsoleHook *WriterHook

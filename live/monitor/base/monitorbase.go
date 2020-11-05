@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type LiveInfo struct {
+	Title         string
+	StreamingLink string
+}
+
 type MonitorCtx struct {
 	Client         *http.Client
 	ExtraModConfig map[string]interface{}
@@ -25,6 +30,17 @@ func (c *MonitorCtx) HttpGet(url string, header map[string]string) ([]byte, erro
 		finalHeaders[k] = v
 	}
 	return utils.HttpGet(c.Client, url, finalHeaders)
+}
+
+func (c *MonitorCtx) HttpPost(url string, header map[string]string, data []byte) ([]byte, error) {
+	finalHeaders := make(map[string]string, 10)
+	for k, v := range c.GetHeaders() {
+		finalHeaders[k] = v
+	}
+	for k, v := range header {
+		finalHeaders[k] = v
+	}
+	return utils.HttpPost(c.Client, url, finalHeaders, data)
 }
 
 type HeadersConfig struct {
