@@ -78,7 +78,7 @@ func doDownloadHttp(entry *log.Entry, output string, url string, headers map[str
 		}
 
 		//written, err := io.CopyBuffer(out, resp.Body, buf)
-		entry.Infof("Wrote %s, err: %s", written, err)
+		entry.Infof("Wrote %d, err: %s", written, err)
 		if err == nil {
 			return nil
 		} else if err == io.EOF {

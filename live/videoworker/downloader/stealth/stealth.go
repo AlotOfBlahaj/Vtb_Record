@@ -19,6 +19,10 @@ func (u *BilibiliRewriter) Rewrite(url string) (newUrl string, useMain, useAlt i
 	// for gotcha105 & gotcha104, never use altproxy when downloading
 	if strings.Contains(url, "gotcha105") {
 		useAlt = 0
+	} else if strings.Contains(url, "gotcha103") {
+		newUrl = strings.Replace(url, "https://d1--cn-gotcha103.bilivideo.com", "http://shnode.misty.moe:49980", 1)
+		newUrl = strings.Replace(url, "http://d1--cn-gotcha103.bilivideo.com", "http://shnode.misty.moe:49980", 1)
+		useAlt = 0
 	} else if strings.Contains(url, "gotcha104") {
 		if u.needTxyunRewrite {
 			newUrl = strings.Replace(url, "https://d1--cn-gotcha104.bilivideo.com", "https://3hq4yf8r2xgz9.cfc-execute.su.baidubce.com", 1)

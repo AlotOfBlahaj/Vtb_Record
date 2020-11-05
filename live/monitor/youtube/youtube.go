@@ -1,15 +1,16 @@
 package youtube
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live/interfaces"
 	"github.com/fzxiao233/Vtb_Record/live/monitor/base"
-	"github.com/fzxiao233/Vtb_Record/live/monitor/bilibili"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -25,54 +26,49 @@ type Youtube struct {
 	usersConfig config.UsersConfig
 }
 
-func (y *Youtube) getVideoInfo() error {
-	url := "https://www.youtube.com" + "/channel/" + y.usersConfig.TargetId + "/live"
-	htmlBody, err := y.Ctx.HttpGet(url, map[string]string{})
+func getVideoInfo(ctx *base.MonitorCtx, baseHost string, channelId string) (*base.LiveInfo, error) {
+	url := baseHost + "/channel/" + channelId + "/live"
+	htmlBody, err := ctx.HttpGet(url, map[string]string{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	re, _ := regexp.Compile(`ytplayer.config\s*=\s*([^\n]+?});`)
 	result := re.FindSubmatch(htmlBody)
 	if len(result) < 2 {
-		return fmt.Errorf("youtube cannot find js_data")
+		return nil, fmt.Errorf("youtube cannot find js_data")
 	}
 	jsonYtConfig := result[1]
 	playerResponse := gjson.GetBytes(jsonYtConfig, "args.player_response")
 	if !playerResponse.Exists() {
-		return fmt.Errorf("youtube cannot find player_response")
+		return nil, fmt.Errorf("youtube cannot find player_response")
 	}
 	videoDetails := gjson.Get(playerResponse.String(), "videoDetails")
 	if !playerResponse.Exists() {
-		return fmt.Errorf("youtube cannot find videoDetails")
+		return nil, fmt.Errorf("youtube cannot find videoDetails")
 	}
 	IsLive := videoDetails.Get("isLive").Bool()
 	if !IsLive {
-		return err
+		return nil, err
 	} else {
-		y.Title = videoDetails.Get("title").String()
-		y.Target = "https://www.youtube.com/watch?v=" + videoDetails.Get("videoId").String()
-		y.IsLive = IsLive
-		return nil
+		return &base.LiveInfo{
+			Title:         videoDetails.Get("title").String(),
+			StreamingLink: "https://www.youtube.com/watch?v=" + videoDetails.Get("videoId").String(),
+		}, nil
 	}
 	//return nil, nil
 	//log.Printf("%+v", y)
 }
 
 type YoutubePoller struct {
-	LivingUids map[string]bilibili.LiveInfo
+	LivingUids map[string]base.LiveInfo
 	lock       sync.Mutex
 }
 
 var U2bPoller YoutubePoller
 
-func (y *YoutubePoller) parseBaseStatus(rawPage string) ([]string, error) {
+func (y *YoutubePoller) parseBaseStatus(jsonGuideData string) ([]string, error) {
 	livingUids := make([]string, 0)
 
-	re, _ := regexp.Compile(`var\s*ytInitialGuideData\s*=\s*([^\n]+?});`)
-	result := re.FindStringSubmatch(rawPage)
-	if len(result) < 1 {
-		return livingUids, fmt.Errorf("youtube cannot find ytInitialGuideData")
-	}
 	addItem := func(itm gjson.Result) {
 		isLive := itm.Get("guideEntryRenderer.badges.liveBroadcasting")
 		if isLive.Bool() == false {
@@ -85,8 +81,7 @@ func (y *YoutubePoller) parseBaseStatus(rawPage string) ([]string, error) {
 		livingUids = append(livingUids, browsed_id.String())
 	}
 
-	jsonYtConfig := result[1]
-	jsonParsed := gjson.Parse(jsonYtConfig)
+	jsonParsed := gjson.Parse(jsonGuideData)
 	items1 := jsonParsed.Get("items")
 	for _, item := range items1.Array() {
 		items2 := item.Get("guideSubscriptionsSectionRenderer.items")
@@ -111,8 +106,8 @@ func (y *YoutubePoller) parseBaseStatus(rawPage string) ([]string, error) {
 	return livingUids, nil
 }
 
-func (y *YoutubePoller) parseSubscStatus(rawPage string) (map[string]bilibili.LiveInfo, error) {
-	livingUids := make(map[string]bilibili.LiveInfo)
+func (y *YoutubePoller) parseSubscStatus(rawPage string) (map[string]base.LiveInfo, error) {
+	livingUids := make(map[string]base.LiveInfo)
 
 	re, _ := regexp.Compile(`\["ytInitialData"\]\s*=\s*([^\n]+?});`)
 	result := re.FindStringSubmatch(rawPage)
@@ -134,7 +129,7 @@ func (y *YoutubePoller) parseSubscStatus(rawPage string) (map[string]bilibili.Li
 			videoTitle := item.Get("gridVideoRenderer.title.simpleText")
 			//upcomingEventData := item.Get("gridVideoRenderer.upcomingEventData")
 
-			livingUids[channelId.String()] = bilibili.LiveInfo{
+			livingUids[channelId.String()] = base.LiveInfo{
 				Title:         videoTitle.String(),
 				StreamingLink: "https://www.youtube.com/watch?v=" + videoId.String(),
 			}
@@ -147,49 +142,92 @@ func (y *YoutubePoller) parseSubscStatus(rawPage string) (map[string]bilibili.Li
 	return livingUids, nil
 }
 
+func (y *YoutubePoller) parseInnerTubeKey(rawPage string) (string, error) {
+	re, _ := regexp.Compile(`"INNERTUBE_API_KEY":"(.*?)"`)
+	result := re.FindStringSubmatch(rawPage)
+	if len(result) < 2 {
+		//y.LivingUids = livingUids
+		return "", fmt.Errorf("youtube cannot find INNERTUBE_API_KEY")
+	}
+	return result[1], nil
+}
+
+func (y *YoutubePoller) getSAPISIDHASH(sid string, origin string) string {
+	curTime := strconv.FormatInt(time.Now().Unix(), 10)
+	payload := curTime + " " + sid + " " + origin
+	return curTime + "_" + fmt.Sprintf("%x", sha1.Sum([]byte(payload)))
+}
+
+type YoutubeApiHosts struct {
+	ApiHosts []string
+}
+
 func (y *YoutubePoller) getLiveStatus() error {
 	var err error
 	ctx := base.GetCtx("Youtube")
 	//mod := interfaces.GetMod("Youtube")
-	apihosts := []string{
-		"https://nameless-credit-7c9e.misty.workers.dev",
-		"https://delicate-cherry-9564.vtbrecorder1.workers.dev",
-		"https://plain-truth-41a9.vtbrecorder2.workers.dev",
-		"https://snowy-shape-95ae.vtbrecorder3.workers.dev",
-		"https://shiny-cake-4abc.vtbrecorder4.workers.dev",
-		"https://snowy-sound-d33b.vtbrecorder5.workers.dev",
-		"https://lingering-art-8c8e.vtbrecorder6.workers.dev",
-		"https://muddy-forest-b1aa.vtbrecorder7.workers.dev",
-		"https://delicate-smoke-8638.vtbrecorder8.workers.dev",
-		"https://weathered-cherry-4472.vtbrecorder9.workers.dev",
-		"https://raspy-surf-ce6b.vtbrecorder10.workers.dev",
-		"https://square-violet-9579.vtbrecorder11.workers.dev",
+	var apihosts = []string{
+		"https://www.youtube.com",
+	}
+	apihostsConfig := YoutubeApiHosts{}
+	_ = MapToStruct(ctx.ExtraModConfig, &apihostsConfig)
+	if apihostsConfig.ApiHosts != nil {
+		apihosts = apihostsConfig.ApiHosts
 	}
 
-	livingUids := make(map[string]bilibili.LiveInfo)
-	/*
-		rawPageBase, err := ctx.HttpGet(
-			RandChooseStr(apihosts),
-			map[string]string{})
-		if err != nil {
-			return err
+	livingUids := make(map[string]base.LiveInfo)
+
+	cookie, ok := ctx.GetHeaders()["Cookie"]
+	if !ok {
+		cookie, ok = ctx.GetHeaders()["cookie"]
+		if !ok {
+			return fmt.Errorf("Youtube cookie not available!?")
 		}
-		pagebase := string(rawPageBase)
-		baseUids, err := y.parseBaseStatus(pagebase)
-		if err != nil {
-			return err
-		}
-		for _, chanId := range baseUids {
-			if _, ok := livingUids[chanId]; !ok {
-				liveinfo, err := getVideoInfo(ctx, RandChooseStr(apihosts), chanId)
-				if liveinfo != nil {
-					livingUids[chanId] = *liveinfo
-				} else {
-					log.WithError(err).Warnf("Failed to get live info for channel %s", chanId)
-				}
+
+	}
+	re, _ := regexp.Compile("SAPISID=(.*?);")
+	ret := re.FindStringSubmatch(cookie)
+	if len(ret) < 2 {
+		return fmt.Errorf("Youtube SAPISID not present in cookie!")
+	}
+	SAPISID := ret[1]
+
+	rawPageBase, err := ctx.HttpGet(RandChooseStr(apihosts), map[string]string{})
+	if err != nil {
+		return err
+	}
+	pagebase := string(rawPageBase)
+	innerKey, err := y.parseInnerTubeKey(pagebase)
+	if err != nil {
+		return err
+	}
+
+	rawPageBase, err = ctx.HttpPost(
+		RandChooseStr(apihosts)+"/youtubei/v1/guide?key="+innerKey,
+		map[string]string{
+			"x-origin":      "https://www.youtube.com",
+			"authorization": "SAPISIDHASH " + y.getSAPISIDHASH(SAPISID, "https://www.youtube.com"),
+			"content-type":  "application/json",
+		},
+		[]byte(`{"context":{"client":{"clientName":"WEB","clientVersion":"2.20201028.00.00"},"user":{}},"fetchLiveState":true}`),
+	)
+	if err != nil {
+		return err
+	}
+	baseUids, err := y.parseBaseStatus(string(rawPageBase))
+	if err != nil {
+		return err
+	}
+	for _, chanId := range baseUids {
+		if _, ok := livingUids[chanId]; !ok {
+			liveinfo, err := getVideoInfo(ctx, RandChooseStr(apihosts), chanId)
+			if liveinfo != nil {
+				livingUids[chanId] = *liveinfo
+			} else {
+				log.WithError(err).Warnf("Failed to get live info for channel %s", chanId)
 			}
 		}
-	*/
+	}
 
 	rawPage, err := ctx.HttpGet(
 		RandChooseStr(apihosts)+"/feed/subscriptions/",
@@ -237,7 +275,7 @@ func (y *YoutubePoller) StartPoll() error {
 	return nil
 }
 
-func (y *YoutubePoller) IsLiving(uid string) *bilibili.LiveInfo {
+func (y *YoutubePoller) IsLiving(uid string) *base.LiveInfo {
 	y.lock.Lock()
 	if y.LivingUids == nil {
 		err := y.StartPoll()
@@ -281,7 +319,7 @@ func (y *Youtube) CreateVideo(usersConfig config.UsersConfig) *interfaces.VideoI
 }
 func (y *Youtube) CheckLive(usersConfig config.UsersConfig) bool {
 	y.usersConfig = usersConfig
-	err := y.getVideoInfo()
+	err := y.getVideoInfoByPoll()
 	if err != nil {
 		y.IsLive = false
 	}

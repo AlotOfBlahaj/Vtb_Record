@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/fzxiao233/Go-Emoji-Utils"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -39,14 +38,18 @@ func MapToStruct(mapVal map[string]interface{}, structVal interface{}) error {
 }
 
 func HttpGetBuffer(client *http.Client, url string, header map[string]string, buf *bytes.Buffer) (*bytes.Buffer, error) {
-	return HttpGetBufferEx(context.Background(), client, url, header, buf)
+	return HttpDoWithBufferEx(context.Background(), client, "GET", url, header, nil, buf)
 }
 
-func HttpGetBufferEx(ctx context.Context, client *http.Client, url string, header map[string]string, buf *bytes.Buffer) (*bytes.Buffer, error) {
+func HttpDoWithBufferEx(ctx context.Context, client *http.Client, meth string, url string, header map[string]string, data []byte, buf *bytes.Buffer) (*bytes.Buffer, error) {
 	if client == nil {
 		client = &http.Client{}
 	}
-	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	var dataReader io.Reader
+	if data != nil {
+		dataReader = bytes.NewReader(data)
+	}
+	req, _ := http.NewRequestWithContext(ctx, meth, url, dataReader)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.8")
 	for k, v := range header {
@@ -63,13 +66,19 @@ func HttpGetBufferEx(ctx context.Context, client *http.Client, url string, heade
 	}
 
 	if res.StatusCode != 200 && res.StatusCode != 206 {
-		err = fmt.Errorf("HttpGet status code error %d", res.StatusCode)
-		//log.Warn(err)
-		return nil, err
+		if res.StatusCode == 404 {
+			err = fmt.Errorf("HttpGet status error %d", res.StatusCode)
+			return nil, err
+		} else {
+			//buf := bytes.NewBuffer(make([]byte, 0))
+			//_, _ = io.Copy(buf, res.Body)
+			err = fmt.Errorf("HttpGet status error %d with header %v", res.StatusCode, req.Header) //, string(buf.Bytes()))
+			//log.Warn(err)
+			return nil, err
+		}
 	}
 
 	//log.Infof("%v", res.ContentLength)
-
 	//var htmlBody []byte
 	if res.ContentLength >= 0 {
 		if buf == nil {
@@ -108,6 +117,15 @@ func HttpGet(client *http.Client, url string, header map[string]string) ([]byte,
 		return nil, err
 	} else {
 		return buf.Bytes(), nil
+	}
+}
+
+func HttpPost(client *http.Client, url string, header map[string]string, data []byte) ([]byte, error) {
+	buf, err := HttpDoWithBufferEx(context.Background(), client, "POST", url, header, data, nil)
+	if buf == nil {
+		return nil, err
+	} else {
+		return buf.Bytes(), err
 	}
 }
 
@@ -161,7 +179,8 @@ func GetTimeNow() string {
 }
 func RemoveIllegalChar(Title string) string {
 	illegalChars := []string{"|", "/", "\\", ":", "?"}
-	Title = emoji.RemoveAll(Title)
+	//"github.com/fzxiao233/Go-Emoji-Utils"
+	//Title = emoji.RemoveAll(Title)
 	for _, char := range illegalChars {
 		Title = strings.ReplaceAll(Title, char, "#")
 	}

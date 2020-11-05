@@ -2,10 +2,11 @@ package twitch
 
 import (
 	"github.com/fzxiao233/Vtb_Record/config"
+	"github.com/fzxiao233/Vtb_Record/live/monitor/base"
 )
 
 type Twitch struct {
-	ctx    MonitorCtx
+	base.BaseMonitor
 	APIUrl string
 }
 

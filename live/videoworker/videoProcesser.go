@@ -275,9 +275,9 @@ func (p *ProcessVideo) postProcessing() string {
 			err = utils.MoveFiles(src, dst)
 			if err != nil {
 				if !quiet {
-					logger.WithError(err).Warn("Failed to rename from [%s] to [%s]!", src, dst)
+					logger.WithError(err).Warnf("Failed to rename from [%s] to [%s]!", src, dst)
 				} else {
-					logger.WithError(err).Info("Post renaming from [%s] to [%s] failed!", src, dst)
+					logger.WithError(err).Infof("Post renaming from [%s] to [%s] failed!", src, dst)
 				}
 			} else {
 				logger.Infof("Renamed %s to %s", src, dst)
@@ -306,7 +306,7 @@ func (p *ProcessVideo) convertToMp4(dirpath string) string {
 	title := p.getFullTitle()
 	var videoName string
 	if len(p.videoPathList) == 0 {
-		log.Warnf("videoPathList is empty!!!! full info: %s", p)
+		log.Warnf("videoPathList is empty!!!! full info: %v", p)
 	} else if len(p.videoPathList) > 1 {
 		mergedName := utils.ChangeName(title + "_merged.mp4")
 		mergedPath := dirpath + "/" + mergedName
