@@ -2,19 +2,19 @@
 # Make sure to check the documentation at http://goreleaser.com
 before:
   hooks:
-    #- go mod download
+  #- go mod download
 builds:
   - env:
       - CGO_ENABLED=0
     goos:
-      #- darwin
-      #- windows
+      - darwin
+      - windows
       - linux
     goarch:
       - amd64
-      - arm64`
-    goarm:
-      - 7
+#      - arm64
+#    goarm:
+#      - 7
 archives:
   - replacements:
       darwin: Macos
