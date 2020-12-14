@@ -3,11 +3,8 @@
   "LogFileSize": 20,
   "LogLevel": "debug",
   "RLogLevel": "debug", // rclone's log level
-  "PprofHost": "0.0.0.0:49314",
-  "RedisHost": "127.0.0.1:6379",
   "CriticalCheckSec": 30, // in every hour such as 19:55 ~ 20:05, 20:25 ~ 20:35, we increase the speed of checking
   "NormalCheckSec": 60,
-  "ExpressPort": 3000,
   "DownloadQuality": "best",
   "DownloadDir": ["GDrive-VTB1:/vtest"], // DownloadDir stores the download result temporarily, before they were moved into uploaddir, so you can specify multiple. Beware that streamlink provider does not support rclone backend
   "UploadDir": "GDrive-VTB1:/vtest", // UploadDir stores the final recording result

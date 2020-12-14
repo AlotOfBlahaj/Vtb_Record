@@ -5,7 +5,6 @@ import (
 	"github.com/fzxiao233/Vtb_Record/utils"
 	"github.com/knq/sdhook"
 	"github.com/orandin/lumberjackrus"
-	"github.com/rclone/rclone/fs"
 	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
@@ -105,9 +104,9 @@ func InitLog() {
 		logrus.AddHook(GoogleHook)
 	}
 
-	fs.LogPrint = func(level fs.LogLevel, text string) {
-		logrus.WithField("src", "rclone").Infof(fmt.Sprintf("%-6s: %s", level, text))
-	}
+	//fs.LogPrint = func(level fs.LogLevel, text string) {
+	//	logrus.WithField("src", "rclone").Infof(fmt.Sprintf("%-6s: %s", level, text))
+	//}
 
 	UpdateLogLevel()
 }
