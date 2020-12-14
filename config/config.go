@@ -46,13 +46,13 @@ type MainConfig struct {
 	DownloadDir      []string
 	UploadDir        string
 	Module           []ModuleConfig
-	PprofHost        string
-	OutboundAddrs    []string
-	DomainRewrite    map[string]([]string)
-	RedisHost        string
-	ExpressPort      string
-	EnableTS2MP4     bool
-	ExtraConfig      map[string]interface{}
+	//PprofHost        string
+	//OutboundAddrs    []string
+	DomainRewrite map[string]([]string)
+	//RedisHost        string
+	//ExpressPort      string
+	EnableTS2MP4 bool
+	ExtraConfig  map[string]interface{}
 }
 
 var v *viper.Viper
