@@ -3,6 +3,7 @@ package config
 import (
 	log "github.com/sirupsen/logrus"
 	"runtime"
+	"runtime/debug"
 	"time"
 )
 
