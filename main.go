@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"crypto/tls"
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/live"
@@ -10,13 +8,8 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live/plugins"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
 	"github.com/fzxiao233/Vtb_Record/utils"
-	"github.com/rclone/rclone/fs"
-	rconfig "github.com/rclone/rclone/fs/config"
-	"github.com/rclone/rclone/fs/operations"
 	log "github.com/sirupsen/logrus"
-	"io"
 	"math/rand"
-	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -46,14 +39,16 @@ func arrangeTask() {
 		ticker := time.NewTicker(time.Second * time.Duration(1))
 		for {
 			if config.ConfigChanged {
-				time.Sleep(4 * time.Second) // wait to ensure the config is fully written
-				rconfig.LoadConfig()
-				ret, err := config.ReloadConfig()
-				if ret {
-					if err == nil {
-						log.Infof("\n\n\t\tConfig changed and load successfully!\n\n")
-					} else {
-						log.Warnf("Config changed but loading failed: %s", err)
+				allDone := true
+				if allDone {
+					time.Sleep(4 * time.Second) // wait to ensure the config is fully written
+					ret, err := config.ReloadConfig()
+					if ret {
+						if err == nil {
+							log.Infof("\n\n\t\tConfig changed and load successfully!\n\n")
+						} else {
+							log.Warnf("Config changed but loading failed: %s", err)
+						}
 					}
 				}
 			}
@@ -61,10 +56,6 @@ func arrangeTask() {
 		}
 
 	}()
-	var uploadDir = config.Config.UploadDir
-	if uploadDir != "" {
-		utils.MakeDir(uploadDir)
-	}
 	for _, dir := range config.Config.DownloadDir {
 		utils.MakeDir(dir)
 	}
@@ -106,7 +97,6 @@ func arrangeTask() {
 		}
 		time.Sleep(time.Duration(config.Config.NormalCheckSec) * time.Second)
 
-		// wait all live to finish before exit :)
 		if SafeStop {
 			break
 		}
@@ -139,14 +129,7 @@ func handleInterrupt() {
 	go func() {
 		<-c
 		log.Warnf("Ctrl+C pressed in Terminal!")
-		operations.RcatFiles.Range(func(key, value interface{}) bool {
-			fn := key.(string)
-			log.Infof("Closing opened file: %s", fn)
-			in := value.(io.ReadCloser)
-			in.Close()
-			return true
-		})
-		time.Sleep(20 * time.Second) // wait rclone upload finish..
+		time.Sleep(5 * time.Second) // wait rclone upload finish..
 		os.Exit(0)
 	}()
 }
@@ -165,35 +148,10 @@ func handleUpdate() {
 func main() {
 	handleInterrupt()
 	handleUpdate()
-	fs.Config.StreamingUploadCutoff = fs.SizeSuffix(0)
-	fs.Config.IgnoreChecksum = true
-	fs.Config.NoGzip = true
 	rand.Seed(time.Now().UnixNano())
-	fs.Config.UserAgent = "google-api-go-client/0.5"
 
-	http.DefaultTransport = &http.Transport{
-		DisableKeepAlives:  true, // disable keep alive to avoid connection reset
-		DisableCompression: true,
-		IdleConnTimeout:    time.Second * 20,
-		ForceAttemptHTTP2:  false,
-		TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
-		DialContext: func(ctx context.Context, network, addr string) (conn net.Conn, err error) {
-			_addr := addr
-			if domains, ok := config.Config.DomainRewrite[addr]; ok {
-				addr = utils.RandChooseStr(domains)
-				log.Debugf("Overrided %s to %s", _addr, addr)
-			}
-			return net.Dial(network, addr)
-		},
-	}
 	http.DefaultClient.Transport = http.DefaultTransport
-	fs.Config.Transfers = 20
-	fs.Config.ConnectTimeout = time.Second * 2
-	fs.Config.Timeout = time.Second * 4
-	fs.Config.TPSLimit = 0
-	fs.Config.LowLevelRetries = 120
 	config.PrepareConfig()
-
 	config.InitLog()
 	go config.InitProfiling()
 	arrangeTask()

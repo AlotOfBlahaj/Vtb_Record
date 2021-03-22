@@ -1,59 +1,74 @@
 {
-  "LogFile": "Record.log",
-  "LogFileSize": 20,
-  "LogLevel": "debug",
-  "RLogLevel": "debug", // rclone's log level
-  "CriticalCheckSec": 30, // in every hour such as 19:55 ~ 20:05, 20:25 ~ 20:35, we increase the speed of checking
-  "NormalCheckSec": 60,
+  "NormalCheckSec": 30,
+  "CriticalCheckSec": 25,
   "DownloadQuality": "best",
-  "DownloadDir": ["GDrive-VTB1:/vtest"], // DownloadDir stores the download result temporarily, before they were moved into uploaddir, so you can specify multiple. Beware that streamlink provider does not support rclone backend
-  "UploadDir": "GDrive-VTB1:/vtest", // UploadDir stores the final recording result
-  "EnableTS2MP4": false, // if you want to use rclone's cloud backend, then you definitely don't want to auto merge.
+  "DownloadDir": "./save",
+  "EnableTS2MP4": true,
+  "SRT": false,
+  "VTT": true,
   "Module": [
     {
       "Name": "Youtube",
       "Enable": false,
+      "EnableProxy": true,
+      "Proxy": "127.0.0.1:10801",
+      "DownloadProvider": "streamlink",
       "Users": [
         {
           "TargetId": "UCQ0UDLQCjY0rmuxCDE38FGg",
           "Name": "natsuiromatsuri",
-          "NeedDownload": true,
-          "StreamLinkArgs": ["--http-cookies", "YOUR_YOUTUBE_COOKIE"]
+          "NeedDownload": false,
+          "CQConfig": {
+            "NeedCQBot": true,
+            "CQHost": "127.0.0.1:5700",
+            "CQToken": "",
+            "QQGroupID": [
+              ""
+            ]
+          }
         }
-      ],
-      "HttpHeaders": {
-        "Cookie": "YOUTUBE_COOKIE_FOR_MONITOR"
-      }
+      ]
     },
     {
       "Name": "Twitcasting",
       "Enable": false,
+      "DownloadProvider": "streamlink",
       "Users": [
         {
           "TargetId": "natsuiromatsuri",
           "Name": "natsuiromatsuri",
-          "NeedDownload": true
+          "NeedDownload": false,
+          "CQConfig": {
+            "NeedCQBot": true,
+            "CQHost": "127.0.0.1:5700",
+            "CQToken": "",
+            "QQGroupID": [
+              ""
+            ]
+          }
         }
       ]
     },
     {
       "Name": "Bilibili",
       "Enable": true,
-      "DownloadProvider": "go", // go provider uses much less memory and cpu time than streamlink + rclone mount, which is much more suitable for recoding in large scale
-      "UseFollowPolling": true, // use this when you have hundreds of rooms to record, which will make us enable batch request, so that we won't be ratelimited
+      "UseFollowPolling": true,
+      "DownloadProvider": "streamlink",
       "Users": [
         {
-          "TargetId": "4634167",
-          "Name": "tamaki",
+          "TargetId": "",
+          "Name": "",
           "NeedDownload": true,
-          "StreamLinkArgs": ["--bilibili-apihost", "http://direct.misty.moe:16384"], // main api host to retrive video, can be changed to avoid rate limiting
-          "AltStreamLinkArgs": ["--bilibili-apihost", "http://7s6dgkcy7btyx.cfc-execute.bj.baidubce.com"], // change api host to resolve to another cdn
-          "AltProxy": "127.0.0.1:10396" // if direct downloading failed (e.g. rate limited), try this proxy
+          "CQConfig": {
+            "NeedCQBot": false,
+            "CQHost": "",
+            "CQToken": "",
+            "QQGroupID": [
+              ""
+            ]
+          }
         }
-      ],
-      "HttpHeaders": {
-        "Cookie": "BILI_COOKIE_FOR_MONITOR"
-      }
+      ]
     }
   ]
 }

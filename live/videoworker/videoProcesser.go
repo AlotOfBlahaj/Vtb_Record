@@ -177,9 +177,9 @@ func (p *ProcessVideo) startDownloadVideo() {
 	logger.Info("Do postprocessing...")
 	videoName := p.postProcessing()
 	if videoName != "" {
-		//video := p.LiveStatus.Video
-		//video.FileName = videoName
-		//video.FilePath = video.UsersConfig.DownloadDir + "/" + video.FileName
+		video := p.LiveStatus.Video
+		video.FileName = videoName
+		video.FilePath = video.UsersConfig.DownloadDir + "/" + video.FileName
 	}
 	p.finish <- 1
 }
@@ -256,48 +256,16 @@ func (p *ProcessVideo) getFullTitle() string {
 }
 
 func (p *ProcessVideo) postProcessing() string {
-	logger := log.WithField("video", p.LiveStatus.Video)
 	pathSlice := []string{config.Config.UploadDir, p.LiveStatus.Video.UsersConfig.Name} // , p.getFullTitle()
 	dirpath := strings.Join(pathSlice, "/")
 	_, err := utils.MakeDir(filepath.Dir(dirpath))
 	if err != nil {
 		return ""
 	}
-
 	if config.Config.EnableTS2MP4 {
 		return p.convertToMp4(dirpath)
-	} else {
-		dirpath += "/"
-		dirpath += p.getFullTitle()
-		//err := os.Rename(p.LiveStatus.Video.UsersConfig.DownloadDir, dirpath)
-
-		doMove := func(src string, dst string, quiet bool) string {
-			err = utils.MoveFiles(src, dst)
-			if err != nil {
-				if !quiet {
-					logger.WithError(err).Warnf("Failed to rename from [%s] to [%s]!", src, dst)
-				} else {
-					logger.WithError(err).Infof("Post renaming from [%s] to [%s] failed!", src, dst)
-				}
-			} else {
-				logger.Infof("Renamed %s to %s", src, dst)
-			}
-			if err != nil {
-				return ""
-			}
-			return dirpath
-		}
-
-		srcdir := p.LiveStatus.Video.UsersConfig.DownloadDir
-		dstdir := dirpath
-		time.AfterFunc(time.Second*60, func() {
-			for i := 0; i < 5; i++ {
-				doMove(srcdir, dstdir, true)
-				time.Sleep(time.Second * 60)
-			}
-		})
-		return doMove(srcdir, dstdir, false)
 	}
+	return dirpath
 }
 
 func (p *ProcessVideo) convertToMp4(dirpath string) string {
@@ -326,7 +294,7 @@ func (p *ProcessVideo) mergeVideo(outpath string) string {
 		co += aPath + "|"
 	}
 	logger := log.WithField("video", p.LiveStatus.Video)
-	utils.ExecShellEx(logger, true, "ffmpeg", "-i", co, "-c", "copy", "-f", "mp4", outpath)
+	utils.ExecShell("ffmpeg", "-i", co, "-c", "copy", "-f", "mp4", outpath)
 	if !utils.IsFileExist(outpath) {
 		logger.Warnf("%s the video file don't exist", outpath)
 		return ""
@@ -339,7 +307,7 @@ func (p *ProcessVideo) mergeVideo(outpath string) string {
 
 func (p *ProcessVideo) ts2mp4(tsPath string, outpath string) string {
 	logger := log.WithField("video", p.LiveStatus.Video)
-	utils.ExecShellEx(logger, true, "ffmpeg", "-i", tsPath, "-c", "copy", "-f", "mp4", outpath)
+	utils.ExecShell("ffmpeg", "-i", tsPath, "-c", "copy", "-f", "mp4", outpath)
 	if !utils.IsFileExist(outpath) {
 		logger.Warnf("%s the video file don't exist", outpath)
 		return ""
