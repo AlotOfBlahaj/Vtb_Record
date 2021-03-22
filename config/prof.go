@@ -3,7 +3,6 @@ package config
 import (
 	log "github.com/sirupsen/logrus"
 	"runtime"
-	"runtime/debug"
 	"time"
 )
 
@@ -39,11 +38,4 @@ func InitProfiling() {
 			<-ticker.C
 		}
 	}()
-	ticker := time.NewTicker(time.Second * 3)
-	for {
-		start := time.Now()
-		debug.FreeOSMemory()
-		log.WithField("prof", true).Debugf("scvg use %s", time.Now().Sub(start))
-		<-ticker.C
-	}
 }
