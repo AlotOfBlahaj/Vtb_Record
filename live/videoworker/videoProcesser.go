@@ -41,16 +41,15 @@ func init() {
 	limit = rate.NewLimiter(rate.Every(time.Second*5), 1)
 }
 
-func StartProcessVideo(LiveTrace monitor.LiveTrace, Monitor monitor.VideoMonitor, Plugins PluginManager) *ProcessVideo {
+func StartProcessVideo(LiveTrace monitor.LiveTrace, Monitor monitor.VideoMonitor, Plugins PluginManager) {
 	p := &ProcessVideo{LiveTrace: LiveTrace, Monitor: Monitor, Plugins: Plugins}
-	liveStatus := LiveTrace(Monitor)
+	liveStatus := LiveTrace()
 	if liveStatus.IsLive {
 		p.LiveStatus = liveStatus
 		p.appendTitleHistory(p.LiveStatus.Video.Title)
 		limit.Wait(context.Background())
 		p.StartProcessVideo()
 	}
-	return p
 }
 
 func (p *ProcessVideo) getLogger() *log.Entry {
@@ -82,10 +81,10 @@ func (p *ProcessVideo) StartProcessVideo() {
 func (p *ProcessVideo) prepareDownload() error {
 	var pathSlice []string
 	if !config.Config.EnableTS2MP4 {
-		pathSlice = []string{utils.RandChooseStr(config.Config.DownloadDir), p.LiveStatus.Video.UsersConfig.Name,
+		pathSlice = []string{config.Config.DownloadDir, p.LiveStatus.Video.UsersConfig.Name,
 			p.liveStartTime.Format("20060102 150405")}
 	} else {
-		pathSlice = []string{utils.RandChooseStr(config.Config.DownloadDir), p.LiveStatus.Video.UsersConfig.Name}
+		pathSlice = []string{config.Config.DownloadDir, p.LiveStatus.Video.UsersConfig.Name}
 	}
 	dirpath := strings.Join(pathSlice, "/")
 	ret, err := utils.MakeDir(dirpath)
@@ -203,7 +202,7 @@ func (p *ProcessVideo) keepLiveAlive() {
 			p.needStop = true
 			if p.isNeedDownload() {
 				close(p.triggerChan)
-				return //  需要下载时不由此控制end
+				return
 			}
 			p.finish <- 1
 			return
@@ -219,7 +218,7 @@ func (p *ProcessVideo) appendTitleHistory(title string) {
 }
 
 func (p *ProcessVideo) isNewLive() bool {
-	newLiveStatus := p.LiveTrace(p.Monitor)
+	newLiveStatus := p.LiveTrace()
 	logger := p.getLogger()
 	if newLiveStatus.IsLive == false || p.LiveStatus.IsLive == false {
 		logger.Infof("[isNewLive] live offline")
@@ -256,7 +255,7 @@ func (p *ProcessVideo) getFullTitle() string {
 }
 
 func (p *ProcessVideo) postProcessing() string {
-	pathSlice := []string{config.Config.UploadDir, p.LiveStatus.Video.UsersConfig.Name} // , p.getFullTitle()
+	pathSlice := []string{config.Config.DownloadDir, p.LiveStatus.Video.UsersConfig.Name} // , p.getFullTitle()
 	dirpath := strings.Join(pathSlice, "/")
 	_, err := utils.MakeDir(filepath.Dir(dirpath))
 	if err != nil {

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"math/rand"
 	"net/http"
@@ -148,14 +147,10 @@ func GenerateFilepath(DownDir string, VideoTitle string) string {
 	return ChangeName(aFilepath)
 }
 func MakeDir(dirPath string) (ret string, err error) {
-	//if !IsFileExist(dirPath) {
-	if true {
-		//err := os.MkdirAll(dirPath, 0775)
-		err = MkdirAll(dirPath)
+	if !IsFileExist(dirPath) {
+		err := os.MkdirAll(dirPath, 0775)
 		if err != nil {
-			log.Errorf("mkdir error: %s, err: %s", dirPath, err)
-			ret = ""
-			return
+			return "", err
 		}
 		return dirPath, nil
 	}

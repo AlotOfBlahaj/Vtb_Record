@@ -7,19 +7,12 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live/monitor"
 	"github.com/fzxiao233/Vtb_Record/live/plugins"
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
-	"github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
-	"net/http"
 	_ "net/http/pprof"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 )
-
-var SafeStop bool
 
 func initPluginManager() videoworker.PluginManager {
 	pm := videoworker.PluginManager{}
@@ -38,17 +31,14 @@ func arrangeTask() {
 	go func() {
 		ticker := time.NewTicker(time.Second * time.Duration(1))
 		for {
-			if config.ConfigChanged {
-				allDone := true
-				if allDone {
-					time.Sleep(4 * time.Second) // wait to ensure the config is fully written
-					ret, err := config.ReloadConfig()
-					if ret {
-						if err == nil {
-							log.Infof("\n\n\t\tConfig changed and load successfully!\n\n")
-						} else {
-							log.Warnf("Config changed but loading failed: %s", err)
-						}
+			if config.Changed {
+				time.Sleep(4 * time.Second) // wait to ensure the config is fully written
+				ret, err := config.ReloadConfig()
+				if ret {
+					if err == nil {
+						log.Infof("\n\n\t\tConfig changed and load successfully!\n\n")
+					} else {
+						log.Warnf("Config changed but loading failed: %s", err)
 					}
 				}
 			}
@@ -56,9 +46,6 @@ func arrangeTask() {
 		}
 
 	}()
-	for _, dir := range config.Config.DownloadDir {
-		utils.MakeDir(dir)
-	}
 
 	var statusMx sync.Mutex
 	for {
@@ -94,63 +81,15 @@ func arrangeTask() {
 		log.Tracef("checked %s", changed)
 		if time.Now().Minute() > 55 || time.Now().Minute() < 5 || (time.Now().Minute() > 25 && time.Now().Minute() < 35) {
 			time.Sleep(time.Duration(config.Config.CriticalCheckSec) * time.Second)
-		}
-		time.Sleep(time.Duration(config.Config.NormalCheckSec) * time.Second)
-
-		if SafeStop {
-			break
+		} else {
+			time.Sleep(time.Duration(config.Config.NormalCheckSec) * time.Second)
 		}
 	}
-	for {
-		living := make([]string, 0, 128)
-		statusMx.Lock()
-		for _, mod := range status {
-			for name, val := range mod {
-				if val {
-					living = append(living, name)
-				}
-			}
-		}
-		statusMx.Unlock()
-		if len(living) == 0 {
-			break
-		}
-		log.Infof("Waiting to finish: current living %s", living)
-		time.Sleep(time.Second * 5)
-	}
-	log.Infof("All tasks finished! Wait an additional time to ensure everything's saved")
-	time.Sleep(time.Second * 300)
-	log.Infof("Everything finished, exiting now~~")
-}
-
-func handleInterrupt() {
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		log.Warnf("Ctrl+C pressed in Terminal!")
-		time.Sleep(5 * time.Second) // wait rclone upload finish..
-		os.Exit(0)
-	}()
-}
-
-func handleUpdate() {
-	c := make(chan os.Signal)
-	SIGUSR1 := syscall.Signal(10)
-	signal.Notify(c, SIGUSR1)
-	go func() {
-		<-c
-		log.Warnf("Received update signal! Waiting everything done!")
-		SafeStop = true
-	}()
 }
 
 func main() {
-	handleInterrupt()
-	handleUpdate()
 	rand.Seed(time.Now().UnixNano())
 
-	http.DefaultClient.Transport = http.DefaultTransport
 	config.PrepareConfig()
 	config.InitLog()
 	go config.InitProfiling()

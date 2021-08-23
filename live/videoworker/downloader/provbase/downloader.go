@@ -18,14 +18,13 @@ type Downloader struct {
 }
 
 func (d *Downloader) DownloadVideo(video *interfaces.VideoInfo, proxy string, cookie string, filePath string) string {
-	//rl.Take()
 	logger := log.WithField("video", video)
 	logger.Infof("start to download")
 	video.FilePath = filePath
 	err := d.Prov.StartDownload(video, proxy, cookie, filePath)
 	logger.Infof("finished with status: %s", err)
 	if !utils.IsFileExist(filePath) {
-		logger.Infof("%s the video file don't exist", filePath)
+		logger.Infof("download failed: %s", err)
 		return ""
 	}
 	logger.Infof("%s download successfully", filePath)
