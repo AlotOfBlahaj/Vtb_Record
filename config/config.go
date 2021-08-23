@@ -14,7 +14,7 @@ import (
 )
 
 var Config *MainConfig
-var ConfigChanged bool
+var Changed bool
 
 type UsersConfig struct {
 	TargetId     string
@@ -41,7 +41,7 @@ type MainConfig struct {
 	LogLevel         string
 	RLogLevel        string
 	DownloadQuality  string
-	DownloadDir      []string
+	DownloadDir      string
 	UploadDir        string
 	Module           []ModuleConfig
 	ExpressPort      string
@@ -74,17 +74,17 @@ func initConfig() {
 		os.Exit(1)
 	}
 
-	ConfigChanged = true
+	Changed = true
 	v.OnConfigChange(func(in fsnotify.Event) {
-		ConfigChanged = true
+		Changed = true
 	})
 }
 
 func ReloadConfig() (bool, error) {
-	if !ConfigChanged {
+	if !Changed {
 		return false, nil
 	}
-	ConfigChanged = false
+	Changed = false
 	err := v.ReadInConfig()
 	if err != nil {
 		return true, err

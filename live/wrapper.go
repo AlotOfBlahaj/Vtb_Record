@@ -9,20 +9,13 @@ import (
 )
 
 func StartMonitor(mon base.VideoMonitor, usersConfig config.UsersConfig, pm videoworker.PluginManager) {
-	//ticker := time.NewTicker(time.Second * time.Duration(utils.Config.CheckSec))
-	//for {
-	//pm.AddPlugin(&plugins.PluginTranslationRecorder{})
-	//pm.AddPlugin(&plugins.PluginUploader{})
-
-	var fun = func(mon base.VideoMonitor) *interfaces.LiveStatus {
+	var liveTrace = func() *interfaces.LiveStatus {
 		return &interfaces.LiveStatus{
 			IsLive: mon.CheckLive(usersConfig),
-			Video:  monitor.CleanVideoInfo(mon.CreateVideo(usersConfig)),
+			Video:  monitor.GetCleanVideoInfo(mon.CreateVideo(usersConfig)),
 		}
 	}
 
-	videoworker.StartProcessVideo(fun, mon, pm)
+	videoworker.StartProcessVideo(liveTrace, mon, pm)
 	return
-	//<-ticker.C
-	//}
 }

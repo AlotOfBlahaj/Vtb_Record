@@ -11,7 +11,7 @@ import (
 )
 
 type VideoMonitor = base.VideoMonitor
-type LiveTrace func(monitor VideoMonitor) *interfaces.LiveStatus
+type LiveTrace func() *interfaces.LiveStatus
 
 // Monitor is responsible for checking if live starts & live's title/link changed
 func CreateVideoMonitor(module config.ModuleConfig) VideoMonitor {
@@ -33,7 +33,7 @@ func CreateVideoMonitor(module config.ModuleConfig) VideoMonitor {
 }
 
 // sanitize everything in the videoinfo for downloader & plugins
-func CleanVideoInfo(info *interfaces.VideoInfo) *interfaces.VideoInfo {
+func GetCleanVideoInfo(info *interfaces.VideoInfo) *interfaces.VideoInfo {
 	info.Title = utils.RemoveIllegalChar(info.Title)
 	return info
 }
