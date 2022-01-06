@@ -12,6 +12,7 @@ builds:
       - linux
     goarch:
       - amd64
+      - arm
     goarm:
       - 7
 archives:
