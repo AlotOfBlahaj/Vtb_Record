@@ -18,7 +18,7 @@ type DownloaderStreamlink struct {
 }
 
 func (d *DownloaderStreamlink) StartDownload(video *interfaces.VideoInfo, proxy string, cookie string, filepath string) error {
-	arg := []string{}
+	var arg []string
 	arg = append(arg, []string{"--force", "-o", filepath}...)
 	if proxy != "" {
 		arg = addStreamlinkProxy(arg, proxy)

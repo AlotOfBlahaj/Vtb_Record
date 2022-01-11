@@ -9,7 +9,8 @@ import (
 	"github.com/fzxiao233/Vtb_Record/live/videoworker"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
-	_ "net/http/pprof"
+	"os/exec"
+	"strings"
 	"sync"
 	"time"
 )
@@ -18,6 +19,14 @@ func initPluginManager() videoworker.PluginManager {
 	pm := videoworker.PluginManager{}
 	pm.AddPlugin(&plugins.PluginCQBot{})
 	return pm
+}
+
+func checkStreamlink() {
+	c := exec.Command("streamlink", "--version")
+	output, _ := c.CombinedOutput()
+	if !strings.Contains(string(output), "streamlink") {
+		log.Fatal("Cannot find streamlink")
+	}
 }
 
 func arrangeTask() {
@@ -93,5 +102,6 @@ func main() {
 	config.PrepareConfig()
 	config.InitLog()
 	go config.InitProfiling()
+	checkStreamlink()
 	arrangeTask()
 }
