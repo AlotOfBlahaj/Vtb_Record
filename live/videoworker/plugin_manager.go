@@ -40,7 +40,7 @@ func (p *PluginManager) OnDownloadStart(video *ProcessVideo) {
 	for _, plug := range p.plugins {
 		go func(callback PluginCallback) {
 			defer wg.Done()
-			err := callback.LiveStart(video)
+			err := callback.DownloadStart(video)
 			if err != nil {
 				video.getLogger().Errorf("plugin %s downloadstart error: %s", callback, err)
 			}
