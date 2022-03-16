@@ -14,7 +14,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestBilibiliPoller(t *testing.T) {
-	poller := &BilibiliPoller{}
+	poller := &Poller{}
 	err := poller.GetStatus()
 	if err != nil {
 		t.Fatalf("GetStatus returned an error: %s", err)
