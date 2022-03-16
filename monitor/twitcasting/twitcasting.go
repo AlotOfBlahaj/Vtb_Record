@@ -2,14 +2,13 @@ package twitcasting
 
 import (
 	"context"
-	"github.com/bitly/go-simplejson"
 	"github.com/fzxiao233/Vtb_Record/config"
 	"github.com/fzxiao233/Vtb_Record/interfaces"
 	"github.com/fzxiao233/Vtb_Record/monitor/base"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	log "github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 	"golang.org/x/sync/semaphore"
-	"strconv"
 	"strings"
 )
 
@@ -29,10 +28,9 @@ func (t *Twitcasting) getVideoInfo() error {
 	if err != nil {
 		return err
 	}
-	infoJson, _ := simplejson.NewJson(rawInfoJSON)
 	t.StreamingLink = "https://twitcasting.tv/" + t.TargetId
-	t.IsLive = infoJson.Get("movie").Get("live").MustBool()
-	t.Vid = strconv.Itoa(infoJson.Get("movie").Get("id").MustInt())
+	t.IsLive = gjson.GetBytes(rawInfoJSON, "movie.live").Bool()
+	t.Vid = gjson.GetBytes(rawInfoJSON, "movie.id").String()
 	ret, err := t.Ctx.HttpGet("https://twitcasting.tv/"+t.TargetId, map[string]string{})
 	if err != nil {
 		return err
