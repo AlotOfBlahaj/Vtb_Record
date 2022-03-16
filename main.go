@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
+	"github.com/fzxiao233/Vtb_Record/interfaces"
 	"github.com/fzxiao233/Vtb_Record/monitor"
+	"github.com/fzxiao233/Vtb_Record/monitor/base"
 	"github.com/fzxiao233/Vtb_Record/plugins"
 	"github.com/fzxiao233/Vtb_Record/videoworker"
 	log "github.com/sirupsen/logrus"
@@ -103,4 +105,16 @@ func main() {
 	config.InitLog()
 	go config.InitProfiling()
 	arrangeTask()
+}
+
+func StartMonitor(mon base.VideoMonitor, usersConfig config.UsersConfig, pm videoworker.PluginManager) {
+	var liveTrace = func() *interfaces.LiveStatus {
+		return &interfaces.LiveStatus{
+			IsLive: mon.CheckLive(usersConfig),
+			Video:  monitor.GetCleanVideoInfo(mon.CreateVideo(usersConfig)),
+		}
+	}
+
+	videoworker.StartProcessVideo(liveTrace, mon, pm)
+	return
 }
