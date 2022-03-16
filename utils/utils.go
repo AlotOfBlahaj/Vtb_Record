@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"io"
-	"math/rand"
 	"net/http"
 	"os"
 	"path"
@@ -182,14 +181,6 @@ func RemoveIllegalChar(Title string) string {
 	return Title
 }
 
-func I2b(i int) bool {
-	if i != 0 {
-		return true
-	} else {
-		return false
-	}
-}
-
 func Min(a, b int) int {
 	if a < b {
 		return a
@@ -203,28 +194,4 @@ func RPartition(s string, sep string) (string, string, string) {
 		return "", "", parts[0]
 	}
 	return strings.Join(parts[0:len(parts)-1], ""), sep, parts[len(parts)-1]
-}
-
-func RandChooseStr(arr []string) string {
-	return arr[rand.Intn(len(arr))]
-}
-
-func GenRandBuf(p []byte) (n int, err error) {
-	r := rand.NewSource(time.Now().Unix())
-	todo := len(p)
-	offset := 0
-	for {
-		val := int64(r.Int63())
-		for i := 0; i < 8; i++ {
-			p[offset] = byte(val & 0xff)
-			todo--
-			if todo == 0 {
-				return len(p), nil
-			}
-			offset++
-			val >>= 8
-		}
-	}
-
-	panic("unreachable")
 }

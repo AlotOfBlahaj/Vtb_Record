@@ -3,9 +3,9 @@ package plugins
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/fzxiao233/Vtb_Record/live/interfaces"
-	"github.com/fzxiao233/Vtb_Record/live/videoworker"
+	"github.com/fzxiao233/Vtb_Record/interfaces"
 	"github.com/fzxiao233/Vtb_Record/utils"
+	"github.com/fzxiao233/Vtb_Record/videoworker"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 )

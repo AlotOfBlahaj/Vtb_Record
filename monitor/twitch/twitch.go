@@ -2,7 +2,7 @@ package twitch
 
 import (
 	"github.com/fzxiao233/Vtb_Record/config"
-	"github.com/fzxiao233/Vtb_Record/live/monitor/base"
+	"github.com/fzxiao233/Vtb_Record/monitor/base"
 )
 
 type Twitch struct {

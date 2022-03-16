@@ -1,11 +1,11 @@
-package live
+package main
 
 import (
 	"github.com/fzxiao233/Vtb_Record/config"
-	"github.com/fzxiao233/Vtb_Record/live/interfaces"
-	"github.com/fzxiao233/Vtb_Record/live/monitor"
-	"github.com/fzxiao233/Vtb_Record/live/monitor/base"
-	"github.com/fzxiao233/Vtb_Record/live/videoworker"
+	"github.com/fzxiao233/Vtb_Record/interfaces"
+	"github.com/fzxiao233/Vtb_Record/monitor"
+	"github.com/fzxiao233/Vtb_Record/monitor/base"
+	"github.com/fzxiao233/Vtb_Record/videoworker"
 )
 
 func StartMonitor(mon base.VideoMonitor, usersConfig config.UsersConfig, pm videoworker.PluginManager) {

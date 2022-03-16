@@ -3,8 +3,8 @@ package youtube
 import (
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
-	"github.com/fzxiao233/Vtb_Record/live/interfaces"
-	"github.com/fzxiao233/Vtb_Record/live/monitor/base"
+	"github.com/fzxiao233/Vtb_Record/interfaces"
+	"github.com/fzxiao233/Vtb_Record/monitor/base"
 	. "github.com/fzxiao233/Vtb_Record/utils"
 	"github.com/tidwall/gjson"
 	"regexp"

@@ -2,7 +2,7 @@ package base
 
 import (
 	"github.com/fzxiao233/Vtb_Record/config"
-	"github.com/fzxiao233/Vtb_Record/live/interfaces"
+	"github.com/fzxiao233/Vtb_Record/interfaces"
 )
 
 type Mock struct {

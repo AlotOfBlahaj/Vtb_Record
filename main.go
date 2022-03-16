@@ -3,12 +3,10 @@ package main
 import (
 	"fmt"
 	"github.com/fzxiao233/Vtb_Record/config"
-	"github.com/fzxiao233/Vtb_Record/live"
-	"github.com/fzxiao233/Vtb_Record/live/monitor"
-	"github.com/fzxiao233/Vtb_Record/live/plugins"
-	"github.com/fzxiao233/Vtb_Record/live/videoworker"
+	"github.com/fzxiao233/Vtb_Record/monitor"
+	"github.com/fzxiao233/Vtb_Record/plugins"
+	"github.com/fzxiao233/Vtb_Record/videoworker"
 	log "github.com/sirupsen/logrus"
-	"math/rand"
 	"os/exec"
 	"strings"
 	"sync"
@@ -25,7 +23,7 @@ func checkStreamlink() {
 	c := exec.Command("streamlink", "--version")
 	output, _ := c.CombinedOutput()
 	if !strings.Contains(string(output), "streamlink") {
-		log.Fatal("Cannot find streamlink")
+		log.Fatal("Cannot find streamlink\nPlease install streamlink")
 	}
 }
 
@@ -77,7 +75,7 @@ func arrangeTask() {
 					statusMx.Unlock()
 					changed = append(changed, identifier)
 					go func(i int, j string, mon monitor.VideoMonitor, userCon config.UsersConfig) {
-						live.StartMonitor(mon, userCon, pm)
+						StartMonitor(mon, userCon, pm)
 						statusMx.Lock()
 						status[i][j] = false
 						statusMx.Unlock()
@@ -96,12 +94,13 @@ func arrangeTask() {
 	}
 }
 
-func main() {
-	rand.Seed(time.Now().UnixNano())
+func init() {
+	checkStreamlink()
+}
 
+func main() {
 	config.PrepareConfig()
 	config.InitLog()
 	go config.InitProfiling()
-	checkStreamlink()
 	arrangeTask()
 }

@@ -3,7 +3,7 @@ package base
 import (
 	"crypto/tls"
 	"github.com/fzxiao233/Vtb_Record/config"
-	"github.com/fzxiao233/Vtb_Record/live/interfaces"
+	"github.com/fzxiao233/Vtb_Record/interfaces"
 	"github.com/fzxiao233/Vtb_Record/utils"
 	"net/http"
 	"net/url"

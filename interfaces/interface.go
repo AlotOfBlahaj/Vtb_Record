@@ -37,14 +37,14 @@ func init() {
 }
 
 type VideoInfo struct {
-	Title           string
-	Date            string
-	Target          string
-	Provider        string
-	FileName        string
-	FilePath        string
-	UsersConfig     config.UsersConfig
-	TransRecordPath string
+	Title       string
+	Date        string
+	Target      string
+	Provider    string
+	FileName    string
+	FilePath    string
+	UsersConfig config.UsersConfig
+	SourceUrl   string
 }
 
 type LiveStatus struct {

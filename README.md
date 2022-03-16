@@ -67,7 +67,6 @@
           "QQGroupID": [
             ""
           ],
-          "TransBiliId": "336731767"
         }
       ]
     },
@@ -83,7 +82,6 @@
           "CQHost": "",
           "CQToken": "",
           "QQGroupID": [],
-          "TransBiliId": "336731767"
         }
       ]
     },
@@ -120,7 +118,6 @@
     "QQGroupID": [
     ""
     ],
-    "TransBiliId": ""  // ③用以捕获在B站弹幕中的同传，配置见下文
 }
 ```
 
@@ -143,14 +140,6 @@
 - CQToken为在HTTPAPI中设置的token（如为设置为空
 
 - QQGroupID为需要发送的群号，各群号间用,分割
-
-③ TransBiliId设置
-
-- TransBiliID为该监控目标对应的Bilibili用户编号（粗体部分）space.bilibili.com/ **336731767**
-
-- 同传指在直播间发送的带有【】标记的内容，会保存为txt文本
-
-- 使用本功能需配置后端[bilibili-danmaku-translation-recorder](https://github.com/fzxiao233/bilibili-danmaku-translation-recorder) 
 
 四、启用本程序
 

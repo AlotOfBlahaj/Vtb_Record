@@ -25,8 +25,8 @@ type UsersConfig struct {
 	ExtraConfig  map[string]interface{}
 }
 type ModuleConfig struct {
-	//EnableProxy     bool
-	//Proxy           string
+	EnableProxy      bool
+	Proxy            string
 	Name             string
 	Enable           bool
 	Users            []UsersConfig
@@ -56,7 +56,6 @@ func InitConfig() {
 	initConfig()
 	log.Print("Load config!")
 	_, _ = ReloadConfig()
-	//fmt.Println(Config)
 }
 
 func initConfig() {
