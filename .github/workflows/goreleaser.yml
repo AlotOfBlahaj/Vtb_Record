@@ -2,6 +2,8 @@ name: goreleaser
 
 on:
   push:
+    tags:
+      - '*'
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
@@ -14,15 +16,14 @@ jobs:
         run: git fetch --prune --unshallow
       -
         name: Set up Go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2
         with:
-          go-version: 1.13.x
+          go-version: 1.18
       -
         name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v1
+        uses: goreleaser/goreleaser-action@v2
         with:
           version: latest
           args: release --rm-dist
-          key: ${{ secrets.YOUR_PRIVATE_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
